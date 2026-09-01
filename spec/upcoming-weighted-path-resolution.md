@@ -1,10 +1,15 @@
 # Weighted Path Resolution for Scenario Scaffolding
 
-> **Status:** Upcoming — not scheduled for implementation yet.
+> **Status:** Accepted — scheduled for implementation. See [§7](#7-trigger-and-the-risk-it-ships-with)
+> for why, and for the risk that decision carries.
 
-## Problem
+## 1. Problem
 
-`ScenarioPathResolver` uses BFS (unweighted) to find the shortest path from source to target. When multiple paths have the **same hop count**, BFS picks arbitrarily. This can produce scaffolds that route through complex delegation/parallel states when a simpler path through interactive states exists.
+`ScenarioPathResolver` explores the machine graph breadth-first, so among paths with the same
+**hop count** it returns whichever one it happened to reach first. Hop count is not scaffold
+complexity: entering a parallel state costs the scenario author guard overrides the runtime cannot
+supply, entering a delegation state costs standing in for a child machine's outcome, and entering an
+interactive state costs one event. Three hops of very different price count the same.
 
 Example — two paths from `pending` to `approved`, both 4 hops:
 
@@ -13,83 +18,503 @@ Path A: pending → eligibility → verification (PARALLEL) → review → appro
 Path B: pending → eligibility → manual_check (INTERACTIVE) → review → approved
 ```
 
-BFS may return Path A (parallel + delegation) when Path B (simpler, no child machines) would produce a much simpler scaffold.
+BFS may return Path A when Path B produces a far simpler scaffold.
 
-## Solution: Weighted Dijkstra
+## 2. Solution: weighted best-first enumeration
 
-Replace BFS queue (`array_shift`, FIFO) with a priority queue sorted by accumulated weight. Each state classification gets a cost:
+Order the search by accumulated cost, and order the results by total cost, where each step costs the
+weight of the state it enters.
+
+**This is definition-time static analysis.** The resolver walks a `MachineDefinition`. No machine is
+instantiated, no macrostep runs, no action executes, no event is dispatched, no timer fires. Every
+claim below about what a scenario author must supply is a claim about the **definition graph**, and
+where the graph and the runtime disagree the resolver follows the graph. Those disagreements are
+catalogued in `spec/draft-scenario-resolver-runtime-divergences.md`; none is fixed here. What this
+change's own weight scale does not distinguish is a separate list, in
+`spec/upcoming-weighted-path-resolution.derivation.md`.
+
+### 2.1 This is not Dijkstra, and must not be named as such
+
+Dijkstra keeps **one global `visited` set** and settles each node once, yielding exactly one shortest
+path per node. This resolver deliberately does the opposite: `visited` is copied and carried **per
+path** (`$newVisited` in `bfs()`), so several distinct routes to the same target are all enumerated —
+that is what `resolveAll()` exists for.
+
+Consequence for naming: rename `bfs()` to `bestFirst()`, not `dijkstra()`. A method named
+`dijkstra()` promises a property — each node settled once, no duplicate routes — that this code does
+not have and must not acquire.
+
+### 2.2 The cost model
+
+**A step is a state the search enters.** The step list is exactly what a `ScenarioPath` carries: it
+begins at the **trigger transition's target**, never at the source state, which is therefore never
+priced. Every state the search descends into is its own step and carries its own weight — including a
+compound state's initial child (reached by the synthetic `@entry`) and a parallel region's initial
+state (reached by the synthetic `@region`). Descent is not collapsed.
+
+**Cost is charged on entry**, not on the route taken out of a state. A path's `totalWeight` is the sum
+of `StateClassification::weight()` over every one of its steps.
+
+**A state's classification is decided by `MachineGraph::classifyState()`, in this precedence:** FINAL,
+then PARALLEL, then DELEGATION (a `machine`/`job` invoke), then TRANSIENT (an `@always` transition
+resolved through the parent chain), then COMPOUND, then INTERACTIVE. A state with overlapping traits
+takes the first match, and the weight follows the classification — so a parallel state that also
+carries an invoke is priced 5 and its child outcome is never charged, and a delegation state that also
+carries an `@always` is priced 3. This spec does not change that precedence.
+
+**Entering a parallel state forks one path per region.** `getNextStates()` yields one `@region`
+successor for each region, so an N-region state produces N sibling paths that the frontier ranks
+against one another. Each such path is a **projection**: the sibling regions are simultaneously active,
+in unspecified states, and contribute no steps and no weight to it. A target inside region B is
+therefore reached only by the path that descends into region B.
+
+**Leaving a parallel state.** A parallel state's successors are its own `@done` and `@fail`
+transitions and its own non-`@always` event transitions, *in addition to* the region descents above.
+Those exits belong to the parallel state itself, not to a region: a path that has descended into a
+region does not come back out to them, because `visited` already holds the parallel state, and because
+a region's final state does not continue to an enclosing **parallel** parent's `@done` — only a
+compound parent's. So a path either projects through one region or leaves the parallel state whole; it
+never does both, and a region projection is therefore a dead end unless the target lies inside that
+region. No region-timeout route exists at definition level.
+
+**Leaving a delegation state.** Its successors are its `@done`, `@done.{finalState}`, `@fail` and
+`@timeout` transitions, and nothing else — a delegation state's ordinary `on:` transitions are not
+traversed. It therefore has no successors, and terminates any path reaching it, exactly when it carries
+none of those four keys. §4 cases 14 and 15 pin both sides of that. The runtime does not always agree;
+see the catalogue.
+
+**`ScenarioPath::totalWeight` is the single source of truth.** It is a public readonly `int`, derived
+by `ScenarioPath` from its own steps — possible without a constructor *signature* change because a
+`ScenarioPathStep` already carries its `StateClassification`. The sort in
+[§2.7](#27-result-ordering-and-resolve) keys on it, and on nothing the frontier computes.
+
+### 2.3 Weights
+
+Weights are **fixed**: an exhaustive `match ($this)` in `StateClassification::weight(): int`. They are
+deliberately not configurable — see [§3](#3-why-weights-are-not-configurable).
+
+The metric is **what the scenario must supply that the runtime cannot** — an event to send, a child
+outcome to stand in for, guards to pin inside a concurrent configuration.
 
 | Classification | Weight | Rationale |
 |---------------|--------|-----------|
-| TRANSIENT | 0 | Free — machine passes through automatically |
-| INTERACTIVE | 1 | Normal — one event needed |
-| DELEGATION | 3 | Expensive — needs child/job outcome in plan() |
-| PARALLEL | 5 | Most complex — multiple regions, guard overrides |
-| FINAL | 0 | Terminal — no traversal cost |
+| TRANSIENT | 0 | The machine leaves on its own via `@always` — no event to send, no actor to stand in for |
+| COMPOUND | 0 | Enters its initial child on its own via `@entry` — supplies nothing |
+| FINAL | 0 | Reached, not driven — nothing is supplied to enter it |
+| INTERACTIVE | 1 | An event must be sent |
+| DELEGATION | 3 | A child machine or job outcome must be stood in for |
+| PARALLEL | 5 | Guards must be pinned inside a configuration where every region is live at once |
 
-### Algorithm Change
+**Only the ordering of these six values is claimed.** The exchange rates between them are not: nothing
+establishes that one PARALLEL is worth five INTERACTIVE rather than three or ten. The scale produces
+exact ties — 3×INTERACTIVE against one DELEGATION, 5×INTERACTIVE against one PARALLEL, 2×DELEGATION
+against PARALLEL+INTERACTIVE — and none was chosen; they fall out of the numbers.
 
-```php
-// Before (BFS — FIFO queue):
-$queue = [[$startState, $path, $visited]];
-[$current, $path, $visited] = array_shift($queue);  // FIFO
+**Three of the six weights are zero**, so a route made only of TRANSIENT, COMPOUND and FINAL steps is
+free at any length — free to this model, that is: `max_transition_depth` (default 100) still bounds how
+far the runtime drains one eventless run, so a cheapest path can be one the runtime refuses to finish.
+That is what makes the reachability regression of
+[§2.9](#29-truncation-changes-meaning-including-what-is-reachable) plausible rather than theoretical,
+and [§7](#7-trigger-and-the-risk-it-ships-with) records the whole unvalidated scale as the change's
+open risk.
 
-// After (Dijkstra — priority queue):
-$queue = new SplPriorityQueue();
-$queue->insert([$startState, $path, $visited], 0);   // priority = -cost (SplPriorityQueue is max-heap)
-[$current, $path, $visited] = $queue->extract();      // lowest cost first
-```
+**Adding a seventh `StateClassification` case must assign it a weight in the same change.** The `match`
+has no default arm on purpose: an unweighted new case is an `UnhandledMatchError` from inside path
+resolution, which is loud, rather than a silent 0, which is not.
 
-Each enqueue adds the classification weight:
+### 2.4 What the model deliberately does not distinguish
 
-```php
-$nextCost = $currentCost + match ($classification) {
-    StateClassification::TRANSIENT   => 0,
-    StateClassification::INTERACTIVE => 1,
-    StateClassification::DELEGATION  => 3,
-    StateClassification::PARALLEL    => 5,
-    StateClassification::FINAL       => 0,
-};
-$queue->insert([$nextState, $newPath, $newVisited], -$nextCost);
-```
+The model prices **classifications of states entered**. Several things a scenario author actually pays
+for are invisible to it — region count, the route out of a delegation or parallel state, guards on
+ordinary transitions, and an `@always` inherited from an ancestor, which classifies a whole subtree
+TRANSIENT and prices every state in it at 0. Each is an accepted imprecision; the alternative — a cost
+function over transitions rather than states — is a different and much larger design. The full list, and
+what was deliberately left off it, is in `spec/upcoming-weighted-path-resolution.derivation.md`.
 
-### Impact
+### 2.5 What the weights do not measure
 
-- `resolve()` returns the **lowest-cost** path (simplest scaffold)
-- `resolveAll()` returns **all paths sorted by cost** (simplest first)
-- Backward compatible — unweighted BFS is Dijkstra with all weights = 1
-- Existing tests pass unchanged (shortest-hop paths are typically also lowest-cost)
+`ScenarioScaffolder::buildPlanEntries()` emits a `plan()` entry for TRANSIENT, DELEGATION, PARALLEL and
+INTERACTIVE, and nothing (`default => null`) for COMPOUND and FINAL. The weights are therefore **not** a
+scaffold line count, and two rows diverge from one deliberately:
 
-### Configuration (Optional)
+- **TRANSIENT** emits `scaffoldTransientEntry()` — a guard block carrying one `// TODO: adjust` per
+  `@always` guard, structurally the same block PARALLEL emits. It is weighted 0 regardless, under the
+  §2.3 metric: the author pins branches of a decision the machine makes by itself, with no event to send
+  and no external actor to simulate. This is the metric's sharpest edge, and it is deliberate — measured
+  against emitted TODOs, TRANSIENT would rank near PARALLEL.
+- **DELEGATION** emits one pre-filled line, `'route' => '@done',` — shorter than what INTERACTIVE emits.
+  It is weighted 3 regardless, because standing in for a child's outcome does not appear in the
+  scaffolder's output at all.
 
-Weights could be configurable via `config/machine.php`:
+COMPOUND and FINAL are the two rows the scaffolder corroborates: both fall to `default => null`.
 
-```php
-'scenarios' => [
-    'path_weights' => [
-        'transient'   => 0,
-        'interactive' => 1,
-        'delegation'  => 3,
-        'parallel'    => 5,
-    ],
-],
-```
+Recording this keeps a later reader from re-deriving the table from `ScenarioScaffolder` and silently
+recalibrating it to line counts.
 
-Default weights are sensible for most machines. Custom weights useful when a project has lightweight delegations (weight 1) or complex interactive chains (weight 2).
+### 2.6 One search, one frontier
 
-## Scope
+Today `resolveAll()` calls the search **once per branch** of the trigger event's transition, each call
+with its own queue and its own iteration counter, accumulating into a shared `$paths` array. That
+structure cannot deliver a cost-ordered frontier: branch 1 exhausts its expensive paths before branch 2
+receives a single iteration.
 
-- `ScenarioPathResolver::bfs()` → `dijkstra()` (rename + priority queue)
-- `ScenarioPathResolver::resolveAll()` → results sorted by total weight
-- `ScenarioPath` — add `totalWeight` property
-- `machine:scenario` command — show path weight in multi-path selection
+`resolveAll()` is restructured to run **one search** over a single frontier:
 
-## When to Implement
+- **Seeding.** Each branch of the trigger transition is taken in the order the branches appear in the
+  transition definition. A branch with no target state is skipped, as it is today. A branch whose target
+  **is** the resolution target is recorded immediately as a one-step path and is *not* placed on the
+  frontier. Every other branch is placed on the frontier at the cost of its own first step —
+  `weight(classification of the branch target)`, not zero — with a `visited` set containing that branch
+  target and nothing else. The trigger's source state is not in `visited`, so a cyclic machine may
+  re-enter it as an ordinary step and price it. Nothing that *is* a step goes unpriced; what §2.2 exempts
+  is the source state, which is not a step at all.
+- **One iteration budget.** `maxIterations` caps the whole resolution rather than each branch, and counts
+  **expansions**: one increment per entry taken off the frontier and expanded, which is what the current
+  loop already counts. For a multi-branch trigger the effective ceiling therefore *drops* — today it is
+  `maxIterations × branchCount`. The default (1000) is unchanged; [§5](#5-backward-compatibility) and the
+  release note tell operators with multi-branch triggers to raise `--max-iterations`.
+- **Reaching the target during the search.** A path is recorded when its final step is pushed by an
+  expansion. The target entry is not placed on the frontier and is never expanded. Together with the
+  seeding rule above, every path is recorded exactly once and no target state is ever expanded.
+- **One truncation flag.** `truncated` is cleared once per `resolveAll()` and set when the loop stops with
+  the frontier non-empty. Today the flag is already an OR across branches — `bfs()` only ever sets it
+  true — so this preserves its meaning while giving it one budget to measure against instead of N.
 
-When users report that `machine:scenario` generates unnecessarily complex scaffolds for machines with equidistant alternative paths. Current BFS is correct for most practical machines.
+### 2.7 Result ordering, and `resolve()`
 
-## References
+`resolveAll()` returns its paths sorted by `ScenarioPath::totalWeight` ascending, then step count
+ascending. The sort is **global**: `resolveAll()` accumulates from every trigger branch, so sorting
+anything narrower would leave a cheap path from a later branch behind an expensive one from an earlier
+branch.
 
-- [Dijkstra's Algorithm — Wikipedia](https://en.wikipedia.org/wiki/Dijkstra%27s_algorithm)
+Step count is the second key because among equal-cost paths the shorter one is a shorter `plan()`.
+
+**Paths tied on both keys have no specified order.** Their relative order is deterministic for a given
+definition — `usort()` is stable as of PHP 8.0 — but this spec does not say what it is, no test may
+assert it, and `--path=N` among such paths is not predictable from the spec. That is a deliberate
+retreat from two earlier attempts, recorded so neither is proposed again:
+
+- Deriving the order from the frontier is wrong. Two paths tied on both keys can have prefixes of
+  differing cost, so they are never equal-priority frontier entries and no rule stated in terms of
+  neighbour order at their divergence point holds. A counterexample: successors x1 (weight 3) then y1
+  (weight 0) at a state S, with X = x1→x2(0)→T and Y = y1→y2(3)→T. Neighbour order predicts X first;
+  the expansion order y1(0), x1(3), y2(3), x2(3) records Y first.
+- A `signature()` third key is not total. Two guarded branches of one trigger transition may legally
+  share a target; §2.6 records each as a one-step path, and the two carry the same state and the same
+  event, so their signatures are identical while the paths are distinct.
+
+**`resolve()` returns `resolveAll()[0]` — a cheapest, shortest path.** It does not short-circuit on the
+first target reached. The two agree on cost and can differ on length. They agree on cost because the
+target has one fixed weight `w(T)`, a record costs the expanded parent's cost plus `w(T)`, and §2.8's
+first requirement expands parents in non-decreasing cost — so record cost is monotone in record order
+and the first record is always a cheapest one. Two premises that argument rests on: every weight is
+non-negative (§2.3's six are, and a seventh case must be too), and §2.6's seeded one-step records, which
+have no expanded parent, cost exactly `w(T)`, a lower bound on every path to T. The frontier's running
+cost and `ScenarioPath::totalWeight` are separate computations (§2.2) but sum the same weights over the
+same steps, so they agree on every path the search produces; the sort keys on `totalWeight`.
+
+They differ on length because record order among
+equal-cost paths follows the frontier, not the path: a long route whose parent reaches cost *c* through
+zero-weight steps is expanded before a short route whose parent reaches the same *c* later in insertion
+order, so the longer path is recorded first. Short-circuiting would return it, and the step-count key
+would not. §4 case 4 pins exactly that shape.
+
+### 2.8 Frontier ordering and its tie-break
+
+The frontier decides **which paths are found under a cap**, and — through `usort()`'s stability — the
+residual order of paths [§2.7](#27-result-ordering-and-resolve) leaves unspecified. It decides nothing
+that §2.7 does specify. Four requirements, and only these four:
+
+1. The frontier expands entries in non-decreasing order of accumulated cost.
+2. Among entries of equal cost, expansion order is insertion order (FIFO), matching today's behaviour.
+3. For a given definition and cap, both the set of paths returned and their order are the same on every
+   run and in every process. A bare `-$cost` priority satisfies neither reliably, and satisfies the
+   single-process case by accident; requirement 2 is what makes this hold, so the two are checked
+   together and no separate observation is claimed for this one.
+4. The truncation flag is set exactly when the loop stops with the frontier non-empty.
+
+Requirement 2 is not automatic: `SplPriorityQueue` gives **no defined order among equal priorities**, so
+a bare `-$cost` priority would leave which paths were found before the cap dependent on heap internals.
+
+`bestFirst()` is private, so all four are observed through `resolveAll()`: 1–3 through **which** paths a
+cap low enough to truncate leaves in the result set; 4 through `wasTruncated()`.
+
+One implementation satisfying all four, offered as guidance rather than as a requirement: an
+`SplPriorityQueue` (a max-heap, hence the negation) with the composite priority `[-$cost, -$sequence]`,
+`$sequence` being a counter incremented on every insert; PHP compares array priorities element-wise, so
+this is cost first, insertion order second.
+
+### 2.9 Truncation changes meaning, including what is reachable
+
+`maxIterations` caps the search. **Today it cuts in branch order, then breadth order within a branch**:
+each branch runs its own search to its own cap, so branch 1's deepest paths are explored before branch 2
+is touched at all. After this change there is one frontier and it cuts in **cost order**.
+
+For **ordering**, that is an improvement: the paths a capped search returns are the cheap ones rather
+than the shallow ones, and they are drawn from every branch rather than from the earliest branches only.
+
+For **reachability, it is a regression, and this spec accepts it.** A target reachable only through an
+expensive state has its whole subtree deferred behind every cheaper frontier entry, so a cap that
+previously reached it may no longer. `resolve()` then throws `NoScenarioPathFoundException::truncated()`
+and `ScenarioValidator` reports a truncated analysis, for a machine that has not changed. §2.3's three
+zero weights sharpen this, and note that what is expanded for free is zero-cost **routes**, not zero-cost
+states: `visited` is per path, so a region of free states can absorb the budget combinatorially. The drop
+in the effective ceiling for multi-branch triggers (§2.6) is a second, independent cause of the same
+symptom. Both causes push `wasTruncated()` from `false` toward `true`; no mechanism in this change pushes
+it the other way.
+
+This is accepted rather than mitigated. The operator-facing recovery already exists — `MachineScenarioCommand`
+reports the ceiling by value and says a path may still exist, to be found by raising `--max-iterations`.
+`ScenarioValidator` takes the same `maxIterations` through its constructor, so a caller can raise it
+there too. The alternative, a second breadth-ordered pass whenever the cap is hit, buys back reachability
+at the cost of roughly doubling the work and giving up part of what cost-ordering was for.
+
+## 3. Why weights are not configurable
+
+An earlier draft proposed a `config/machine.php` → `scenarios.path_weights` block. That is rejected.
+
+Configurable weights are permanent public API surface: once shipped, the key, its defaults and its
+precedence rules are a compatibility promise, and removing them is a breaking change. No user has asked
+for them. The weights encode a fact about what a scenario must supply, not a project preference, and a
+project that sets `delegation => 1` has not tuned the search — it has told the resolver something untrue
+about its own scenarios. Adding configuration later is additive and cheap; removing it is not.
+
+`StateClassification::weight()` is a method rather than a private constant on the resolver because
+`ScenarioPath` needs the same numbers to derive its own `totalWeight`, exactly as `stats()` already
+derives its counts from its steps. One home for the weights beats two copies. It is still fixed: a caller
+can read a weight, never change one.
+
+**Revising a weight later is a minor release, not a patch.** The values are not API, but they determine
+`resolveAll()` order and therefore which path `--path=N` selects and which scaffold `machine:scenario`
+writes — observable behaviour a consumer can have depended on. The rule does not extend to paths tied on
+both sort keys: §2.7 leaves their order unspecified, so a selection among them can move under any
+release, patch included, with no weight change at all. An index into a tied group was never a stable
+selector and is not promised to become one.
+
+## 4. Expected behaviour
+
+Costs for the worked example in §1. Path A leaves `verification` by one of its own transitions rather
+than descending into a region; a path that descends is a different path, priced by §2.2.
+
+| Path | Steps (classification) | Total weight | Step count |
+|------|------------------------|--------------|------------|
+| A | eligibility (INTERACTIVE) → verification (PARALLEL) → review (INTERACTIVE) → approved (FINAL) | 1 + 5 + 1 + 0 = **7** | 4 |
+| B | eligibility (INTERACTIVE) → manual_check (INTERACTIVE) → review (INTERACTIVE) → approved (FINAL) | 1 + 1 + 1 + 0 = **3** | 4 |
+
+`resolve()` returns B. `resolveAll()` returns `[B, A]`.
+
+Every row is an assertion against the **new** code alone; none compares against the pre-change
+implementation, and none asserts an order §2.7 leaves unspecified.
+
+Rows 16 and 18–20 fix `maxIterations` at a stated value; every other row is cap-independent. Those four
+are determinate because §2.6 pins seed order to the order the trigger's branches appear in the transition
+definition, so a two-branch fixture makes the whole expansion sequence derivable from the definition
+without simulating anything the spec does not state.
+
+| # | Case | Expected result |
+|---|------|-----------------|
+| 1 | Two equal-length paths of differing cost | `resolve()` returns the lower-cost one |
+| 2 | Two equal-cost paths of differing length | `resolveAll()` returns the one with fewer steps first |
+| 3 | Two paths tied on cost and length | Both present in `resolveAll()`; the test asserts membership, never their relative order |
+| 4 | Long `A(0)→B(0)→C(0)→D(DELEGATION 3)→T(0)` against short `A(0)→M(DELEGATION 3)→N(0)→T(0)`, both weight 3, 5 steps against 4. The long route accumulates its weight later, so its last pre-target step enters the cost-3 band ahead of the short route's | `resolve()` returns the **short** path — a short-circuiting implementation would return the long one, which is recorded first |
+| 5 | Every step INTERACTIVE, single-branch trigger, two paths of differing length | Order is ascending step count, since cost equals step count |
+| 6 | Cheap path reachable only via the trigger's second branch | Returned before the earlier branch's expensive path |
+| 7 | A trigger branch whose target is the resolution target | Recorded as a one-step path; the branch is never placed on the frontier |
+| 8 | A trigger transition with two branches, one of them targetless | The targetless branch contributes no path; the other branch's path is returned |
+| 9 | Compound state whose initial child is INTERACTIVE | Two steps, `totalWeight` 1 — descent is not collapsed |
+| 10 | Two-region parallel state, target inside region B | Every returned path descends into region B; region A contributes no step and no weight |
+| 11 | Parallel state left by its own `@done` | The parallel state is a step at 5 and the `@done` target is a step of its own; no region contributes a step |
+| 12 | A source state classified INTERACTIVE, resolving to a one-step INTERACTIVE target | The source is absent from `steps` and from `totalWeight`, so the path weighs 1, not 2 |
+| 13 | Path of only TRANSIENT, COMPOUND and FINAL steps | `totalWeight` is 0 |
+| 14 | Delegation state carrying **ordinary `on:` transitions** but none of `@done`/`@done.{final}`/`@fail`/`@timeout`, as the resolution target | One path ending there, `totalWeight` including its 3. With any target beyond it, no path — the `on:` transitions are not traversed, which is the resolver's graph, not the runtime's behaviour |
+| 15 | Delegation state carrying `@fail` and ordinary `on:` transitions, but no `@done` | Paths continue through it by `@fail` only; the `on:` transitions contribute no successor |
+| 16 | A resolution that exhausts the frontier | `wasTruncated()` is `false` |
+| 17 | Cyclic source: `S` with `on E ⇒ A` and `on Y ⇒ T`, and `A` with `on X ⇒ S`, resolving `S —E→ T` | The re-entry into `S` **is** a step and **is** priced. A resolver seeding `visited` with the source instead of only the branch target returns a smaller result set, and this is the only row that separates them |
+| 18 | Two-branch trigger, `maxIterations` 1 | One expansion runs, the second seed is still on the frontier, so `wasTruncated()` is `true` — §2.8's requirement 4, positive half |
+| 19 | Two-branch trigger whose branches reach the target at **equal** cost, `maxIterations` 1 | The first branch's path is returned and the second's is not: seeds carry sequence numbers in branch order and requirement 2 expands equal costs FIFO. A bare `-$cost` priority queue fails this row and passes every other — it is the only acceptance for the requirement §2.8 calls not automatic |
+| 20 | Branch 1 to a chain of three TRANSIENT states, branch 2 to a PARALLEL whose region holds the target, `maxIterations` 3 | The zero-cost chain consumes the budget before the weight-5 seed is expanded: `wasTruncated()` is `true` and the target is **not** found — the accepted regression of §2.9, and the reason it is plausible rather than theoretical |
+| 21 | Multi-path listing in `machine:scenario` | Each listed path shows its weight, per §6 item 5 |
+| 22 | Single-path listing in `machine:scenario` | The weight is shown for that path too |
+
+## 5. Backward compatibility
+
+"Existing tests pass unchanged" is a hypothesis, resting on shortest-hop usually also being lowest-cost.
+It is not established.
+
+### 5.1 Known divergences
+
+1. **`resolveAll()` order changes.** Today paths are appended per trigger branch and never sorted, so
+   branch 1's 5-step path precedes branch 2's 2-step path even when every step is INTERACTIVE; the global
+   sort reverses that. Any test asserting the order, or indexing into it, is affected.
+2. **`--path=N` re-indexes.** A saved invocation or runbook step that selected path 3 selects a different
+   path after upgrade — usually with no error, though under a cap the listing can also shrink and the
+   index fail out of range instead. There is no automatic migration in either direction: capture the
+   listing *before* upgrading and re-match by the signature it already prints, and do the same before a
+   rollback, since the re-index is symmetric. The listing's first line per path is its
+   `ScenarioPath::signature()`, which is what makes the re-match possible. Two caveats. Signatures are not
+   unique (§2.7): paths tied on cost, length *and* signature cannot be told apart by anything the listing
+   renders, and they are **not** interchangeable — the case §2.7 exhibits is two guarded trigger branches,
+   whose differing guards the scaffolder emits only for a TRANSIENT or PARALLEL target, so for those two
+   the scaffolds differ while nothing in the listing distinguishes them, and for an INTERACTIVE or
+   DELEGATION target the scaffolds are identical and the paths interchangeable. And re-matching
+   restores a *path*, not an index: an index into a tied group is not a stable selector at any time,
+   before or after this change.
+3. **The effective iteration ceiling drops** for a multi-branch trigger, from `maxIterations × branchCount`
+   to `maxIterations` (§2.6). The default is unchanged, so operators who never pinned `--max-iterations`
+   lose the same headroom silently; a pinned value should be multiplied by the trigger's branch count —
+   and divided again on rollback, or the next upgrade compounds it.
+4. **Truncation becomes more likely, never less**: reachability under a cap can regress (§2.9, case 20),
+   and `wasTruncated()` can report `true` where it reported `false` on an unchanged machine at an
+   unchanged cap (§2.6's single budget). `ScenarioValidator` is exposed to this too; its cap is a
+   constructor argument, so a caller can raise it — but one validator cap spans every trigger it checks,
+   so raise it by the largest branch count in play, not by one trigger's, and divide back on rollback.
+5. **`machine:scenario`'s operator-facing text changes twice** — the stats line gains a trailing weight
+   (§6 item 5), and any of the four truncation messages that names hop count, breadth or shortest paths
+   is reworded (§6 item 6). Any test asserting either string changes, and that is expected, not a defect.
+6. **`ScenarioPath` gains a serialised property.** `$totalWeight` appears in anything that serialises a
+   path, so a snapshot test over one changes. It is also *derived* rather than accepted (§6 item 2), so it
+   is a readonly `int` with no default: any hydration that bypasses the constructor — `unserialize()`,
+   reflection-based rebuilding — leaves it uninitialised and reading it throws. On rollback the mirror
+   applies: a path serialised by the new code and read back by the old class carries `totalWeight` as an
+   undeclared property. No serialised `ScenarioPath` is expected to cross a version boundary; if one does,
+   regenerate it. On PHP 8.3 that readback is a dynamic-property deprecation, and a fatal under a strict
+   error handler. A subclass overriding `__construct` without calling `parent::__construct` reaches the
+   same uninitialised state by a different route, and is worse: no load-time signal, just a throw on the
+   first read, which after this change happens inside `resolveAll()`'s sort.
+7. **The default scaffold changes.** A caller passing no flags gets `resolveAll()[0]`, and that element
+   moves, so `machine:scenario` writes a different scaffold for an unchanged machine. Committed scaffolds
+   are neither regenerated nor migrated, and a regenerate-and-diff CI check reports drift on the upgrade
+   commit. This is the change's primary user-visible effect, not a corner of it. It does **not** reverse
+   on rollback: a scaffold regenerated and committed while the new version was live outlives the
+   downgrade, and the old resolver then disagrees with it. Revert those commits with the release or
+   regenerate again after. Note also that a generated scaffold is meant to be hand-edited, so
+   regenerate-and-diff overwrites author work — diff first, merge by hand.
+
+#### Sequencing, and what the durable artefacts are
+
+The upgrade actions above are **ordered**: multiply any pinned `--max-iterations` (divergences 3 and 4)
+*before* capturing the `machine:scenario` listing (divergence 2), or the capture is taken under a ceiling
+the upgrade will change. Reverse the order on rollback. A signature that is missing after the upgrade is
+otherwise ambiguous between the re-index and §2.9's reachability regression, and nothing distinguishes
+them after the fact.
+
+This is the whole persistence surface: two durable artefacts, a serialised `ScenarioPath` and a committed
+scaffold file. Nothing in this change is written to a database.
+
+**New public surface**: `StateClassification::weight(): int` and `ScenarioPath::$totalWeight`. Both are
+additive — §3's minor-release rule is about revising a weight and does not cover them, so they carry the
+ordinary additive-change expectation instead. One is a genuine upgrade-time break rather than a
+divergence: a subclass of `ScenarioPath` that already declares a `$totalWeight` property is a **fatal**,
+since a readonly property cannot be redeclared. That is the only pre-upgrade *fatal*, not the only
+pre-upgrade action: divergences 2 and 3 each prescribe work whose window closes at upgrade time —
+capturing the listing, and recording any pinned `--max-iterations` — and the release note must carry all
+three.
+
+**`bfs()` is `private`**, so the rename to `bestFirst()` reaches no consumer and no subclass.
+
+### 5.2 Triage rule for a broken test
+
+A changed expectation is acceptable when, and only when, one of these holds:
+
+1. The newly-returned path is **lexicographically** lower on `(totalWeight, stepCount)` than the one it
+   replaces — lower on the first key where they differ, not lower on every key.
+2. The test asserted an order §4 now defines differently, including a cross-branch reorder, or asserted
+   a relative order between paths tied on both keys, which §2.7 no longer specifies.
+3. The test asserted output that divergence 3, 4, 5, 6 or 7 above changes: an iteration ceiling, a
+   `wasTruncated()` value, the stats line, a snapshot of a `ScenarioPath` that now carries one more
+   field, or a generated scaffold. A `ScenarioPath` **hydration that now throws** is divergence 6's other
+   half and is not covered here — that is a defect.
+4. The test now finds no path, `wasTruncated()` is `true`, and raising `maxIterations` restores it. If
+   no value restores it, the path is gone for another reason and that is a defect.
+
+Anything else is a defect — in particular a test that finds no path while `wasTruncated()` is `false`.
+
+**Rule 1 has one exception the keys cannot express.** A route the runtime will not run is often
+*cheaper* on `(totalWeight, stepCount)` than the one it replaces — an inherited `@always` prices a whole
+subtree at 0 — so rule 1 admits it. Before accepting a replacement path, check it against the catalogue
+in `spec/draft-scenario-resolver-runtime-divergences.md`. A winner matching one of those four shapes is a
+defect this change surfaced, not acceptable churn. This is a reading, not an assertion: neither
+`max_transition_depth` nor the macrostep boundary is visible to a `ScenarioPath`.
+
+Run the suite and record the result.
+
+## 6. Scope
+
+Items 1–4 are a dependency chain, in order; item 3 carries both the frontier and the `resolveAll()`
+rework because §2.8's requirements are only observable through `resolveAll()`. Item 5 depends on item 2.
+Items 6–10 depend on nothing above them, and 7, 8, 9 and 10 must land in the same commit as the tag or
+before it. The release version is chosen when the release is cut; items 9 and 10 embed it.
+
+### 6.1 Deliverables
+
+1. `StateClassification::weight(): int` — six fixed `match` arms, no default.
+2. `ScenarioPath` — public readonly `int $totalWeight`, derived from its own steps. Deriving rather than
+   accepting it leaves every existing `new ScenarioPath(...)` call site working without a signature
+   change, and makes an inconsistent value impossible to construct.
+3. `ScenarioPathResolver::bfs()` → `bestFirst()` (private) on a cost-ordered frontier meeting §2.8's four
+   requirements, and `resolveAll()` restructured onto it with §2.6's seeding, budget, target-recording
+   and flag rules, then §2.7's global sort. Closed against §4 cases 1–3 and 5–20 — case 19 is the only
+   one that fails a bare `-$cost` priority queue, so it is not optional.
+4. `ScenarioPathResolver::resolve()` — confirm it still returns `resolveAll()[0]`, with a test pinning
+   §4 case 4.
+5. `MachineScenarioCommand` — each listed path's weight is shown on the existing stats line, after the
+   `@continue` count, as `weight ` followed by the integer — `weight 7` for a path of `totalWeight` 7,
+   with no braces in the output. Shown for every listed path, including when only one path is found. The
+   line's existing indentation and separator style are unchanged. Closed against cases 21–22.
+6. Re-read the four sites that render a truncation result against §2.9's new meaning: the
+   `NoScenarioPathFoundException::truncated()` factory, `MachineScenarioCommand`'s empty-result error,
+   `MachineScenarioCommand`'s found-paths warning, and `ScenarioValidator`'s truncated-analysis error.
+   **Pass:** none of the four contains the words hop, breadth or shortest. A message failing that check is
+   reworded **in this change**, by the implementer, with the old and new text in the task's closing
+   evidence. If the count found is not four, the item fails and this spec is corrected before proceeding.
+7. `docs/` — the `machine:scenario` documentation states that paths are listed cheapest first, defines
+   what the weight means and that it is not a scaffold line count, records that `--path=N` re-indexed in
+   this release, and notes both that `--max-iterations` now caps the whole resolution rather than each
+   trigger branch, and that paths of equal weight and length have no promised order, so `--path=N` among
+   them is not a stable selector.
+8. `skills/event-machine/SKILL.md` — the same facts as item 7, at the density the skill uses. Per CLAUDE.md
+   the skill ships **with** the tag, never after; a skill commit landed after the tag never reaches agents
+   until the next release.
+9. `spec/<version>-weighted-path-resolution-release-notes.md`, following the repo's existing release-note
+   files — covering all seven divergences of §5.1, each with its remedy where one exists. It must carry
+   §5.1's pre-upgrade actions **in their stated order**: scale any pinned `--max-iterations` first, then
+   capture the `machine:scenario` listing for any pinned `--path=N`; and separately, check for a
+   `ScenarioPath` subclass that declares `$totalWeight` or overrides `__construct` without calling the
+   parent (either is a fatal). It must also carry the rollback actions, which are not the inverse by
+   default: divide the pinned caps back, re-capture the listing, and decide whether scaffolds regenerated
+   under the new version are reverted with the release or regenerated again after.
+10. Rename this spec from `spec/upcoming-weighted-path-resolution.md` to
+    `spec/<version>-weighted-path-resolution.md` before the tag, per `spec/README.md` and CLAUDE.md, and
+    remove the untracked `upcoming-*.tasks.json` left beside it.
+
+### 6.2 Out of scope, and deliberately unfixed here
+
+- `PathEnumerator` and `PathCoverageTracker` enumerate coverage paths, not scaffold routes, and have no
+  notion of scaffold cost. `PathEnumerator` names `ScenarioPathResolver` only in a comment.
+- Every resolver/runtime disagreement catalogued in `spec/draft-scenario-resolver-runtime-divergences.md`.
+
+## 7. Trigger, and the risk it ships with
+
+The original spec deferred this until "users report that `machine:scenario` generates unnecessarily
+complex scaffolds for machines with equidistant alternative paths". **No such report exists.** It is
+scheduled anyway because the defect is structural and demonstrable from the definition graph — BFS has no
+way to prefer Path B over Path A in §1 — and because the ordering it produces today is arbitrary rather
+than merely suboptimal.
+
+**Two risks ship. The first: an inherited `@always` prices a whole subtree at 0.** `classifyState()`
+resolves `@always` through the parent chain, so one ancestor's `@always` classifies every descendant
+TRANSIENT — including a leaf a scenario can only enter by sending an event. The scale charges 0 for each
+of them and the author pays for all of them, and nothing in a state's own definition reveals it. This is
+the scale's broadest under-price, it was found in the last review round, and it is not fixed here.
+
+**The second: the scale ships unvalidated, and that is a decision, not an oversight.** §2.3 claims only the ordering;
+§4 tests self-consistency with the table, which cannot detect a wrong exchange rate; the `pending →
+approved` example is illustrative, not observed. No validation against a real machine is scheduled and
+none gates the release. §3's minor-release rule is the correction path if a real machine later shows the
+ordering to be wrong.
+
+## 8. References
+
+- [Dijkstra's Algorithm — Wikipedia](https://en.wikipedia.org/wiki/Dijkstra%27s_algorithm) (for the contrast drawn in §2.1, not as the algorithm implemented)
 - [XState `@xstate/graph` — getShortestPaths() uses Dijkstra with weight=1](https://stately.ai/docs/xstate-graph)
 - [Alur & Yannakakis (2003) — Formal Analysis of Hierarchical State Machines](https://www.cis.upenn.edu/~alur/Zohar03.pdf)
