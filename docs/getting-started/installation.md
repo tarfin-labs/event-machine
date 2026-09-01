@@ -2,8 +2,8 @@
 
 ## Requirements
 
-- PHP 8.2 or higher
-- Laravel 10.x, 11.x, or 12.x
+- PHP 8.3 or higher
+- Laravel 11.x, 12.x, or 13.x
 - ext-zlib (for compression features)
 
 ## Install via Composer

@@ -21,7 +21,7 @@ Each section below has step-by-step migration instructions with before/after exa
 
 | EventMachine | PHP | Laravel | Status |
 |--------------|-----|---------|--------|
-| **9.x** | 8.3+ | 11.x, 12.x | **Active** |
+| **9.x** | 8.3+ | 11.x, 12.x, 13.x | **Active** |
 | 8.x | 8.3+ | 11.x, 12.x | End of life |
 | 7.x | 8.3+ | 11.x, 12.x | End of life |
 | 6.x | 8.3+ | 11.x, 12.x | End of life |

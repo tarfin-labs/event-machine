@@ -245,7 +245,7 @@ All behaviors should extend appropriate base classes:
 - E2E tests in `tests/E2E/` test full pipeline with real artisan commands
 
 ### Code Style
-- PHP 8.2+ with strict types enabled
+- PHP 8.3+ with strict types enabled
 - Laravel Pint with custom alignment rules for `=>` and `=` operators
 - PHPStan level 5 analysis
 - All classes use declare(strict_types=1)
