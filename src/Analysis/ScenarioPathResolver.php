@@ -32,7 +32,7 @@ class ScenarioPathResolver
     private bool $truncated = false;
 
     /**
-     * @param  int  $maxIterations  BFS iteration cap. The default is the value this
+     * @param  int  $maxIterations  Expansion cap for the whole resolution. The default is the value this
      *                              resolver has always used; it is a constructor setting
      *                              only so the truncation behaviour can be exercised
      *                              without changing what ships.
@@ -54,7 +54,11 @@ class ScenarioPathResolver
     }
 
     /**
-     * Find the shortest path from source to target via the trigger event.
+     * Find the cheapest path from source to target via the trigger event.
+     *
+     * Cheapest by total weight, then by step count. This is resolveAll()[0] and deliberately
+     * not the first target the search reaches: those two disagree whenever equally priced
+     * routes accumulate their weight at different points.
      */
     public function resolve(string $source, string $event, string $target): ScenarioPath
     {
@@ -115,7 +119,7 @@ class ScenarioPathResolver
         $paths    = [];
         $targetId = $targetState->id;
 
-        // BFS from each branch of the trigger event's transition
+        // Seed one frontier from every branch of the trigger event's transition
         // One frontier for every branch of the trigger, seeded in the order the branches appear
         // in the transition definition. A per-branch search cannot deliver a cost-ordered
         // frontier: the first branch would exhaust its expensive paths before the second was
