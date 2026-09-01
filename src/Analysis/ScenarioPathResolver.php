@@ -126,7 +126,6 @@ class ScenarioPathResolver
         $paths    = [];
         $targetId = $targetState->id;
 
-        // Seed one frontier from every branch of the trigger event's transition
         // One frontier for every branch of the trigger, seeded in the order the branches appear
         // in the transition definition. A per-branch search cannot deliver a cost-ordered
         // frontier: the first branch would exhaust its expensive paths before the second was
