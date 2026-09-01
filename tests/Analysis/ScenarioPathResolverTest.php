@@ -90,7 +90,7 @@ test('path through job actor @done', function (): void {
 test('path through job actor @done.{state} routing', function (): void {
     $resolver = scenarioResolver();
     // delegating has @done → delegation_complete and @done.error → delegation_error
-    // BFS from reviewing → DELEGATE traverses delegation outcomes
+    // The search from reviewing → DELEGATE traverses delegation outcomes
     $paths = $resolver->resolveAll('reviewing', 'DELEGATE', 'delegation_error');
 
     expect($paths)->not->toBeEmpty();
@@ -181,8 +181,8 @@ test('@start + delegation chain (idle → @always → job → @done → ...)', f
 
 // ── Edge cases ───────────────────────────────────────────────────────────────
 
-test('cycle detection — BFS terminates, does not infinite-loop', function (): void {
-    // ScenarioTestMachine has no cycles, but BFS should terminate anyway.
+test('cycle detection — the search terminates, does not infinite-loop', function (): void {
+    // ScenarioTestMachine has no cycles, but the search should terminate anyway.
     // resolveAll with an unreachable target should return empty, not hang.
     $resolver = scenarioResolver();
     $paths    = $resolver->resolveAll('reviewing', 'APPROVE', 'reviewing'); // approved is final, can't go back
