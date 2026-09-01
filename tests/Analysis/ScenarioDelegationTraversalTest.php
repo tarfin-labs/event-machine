@@ -55,3 +55,24 @@ test('a delegation state is walked by its four keys and by nothing else', functi
     expect($viaOrdinary)->toBeEmpty()
         ->and($resolver->wasTruncated())->toBeFalse();
 });
+
+test('a delegation state carrying fail and no done is still walked by fail', function (): void {
+    $resolver = edgeResolver();
+
+    // fail_pure has @fail and NO @done. Collecting @fail is not conditional on @done being
+    // present beside it, which is the half the both-keys state above cannot show.
+    $viaFail = $resolver->resolveAll('root', 'PURE', 'failed_out');
+
+    expect($viaFail)->toHaveCount(1)
+        ->and(scenarioStateKeys($viaFail[0]))->toBe(['fail_pure', 'failed_out'])
+        // fail_pure (DELEGATION 3) + failed_out (FINAL 0)
+        ->and($viaFail[0]->totalWeight)->toBe(3)
+        ->and($viaFail[0]->steps[1]->event)->toBe('@fail');
+
+    // Its `target` is the engine's fire-and-forget destination, not a transition, so it is not
+    // a successor either — the state is walkable by exactly one of the two keys it names.
+    $viaTarget = $resolver->resolveAll('root', 'PURE', 'after_edge');
+
+    expect($viaTarget)->toBeEmpty()
+        ->and($resolver->wasTruncated())->toBeFalse();
+});
