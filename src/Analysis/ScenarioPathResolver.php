@@ -115,20 +115,44 @@ class ScenarioPathResolver
         $targetId = $targetState->id;
 
         // BFS from each branch of the trigger event's transition
+        // One frontier for every branch of the trigger, seeded in the order the branches appear
+        // in the transition definition. A per-branch search cannot deliver a cost-ordered
+        // frontier: the first branch would exhaust its expensive paths before the second was
+        // given a single expansion.
+        $frontier = [];
+
         foreach ($eventTransition->branches ?? [] as $branch) {
             if (!$branch->target instanceof StateDefinition) {
                 continue;
             }
 
-            $this->bfs(
-                startState: $branch->target,
-                startEvent: $event,
-                startGuards: $branch->guards ?? [],
-                startActions: $branch->actions ?? [],
-                targetId: $targetId,
-                results: $paths,
+            $firstStep = $this->step(
+                state: $branch->target,
+                event: $event,
+                guards: $branch->guards ?? [],
+                actions: $branch->actions ?? [],
             );
+
+            // A branch whose target IS the resolution target is a one-step path. It is recorded
+            // here and never placed on the frontier, so no target state is ever expanded.
+            if ($branch->target->id === $targetId) {
+                $paths[] = new ScenarioPath([$firstStep]);
+
+                continue;
+            }
+
+            // Seeded at the cost of its own first step, not at zero. `visited` holds that branch
+            // target and nothing else: the trigger's source is deliberately absent, so a cyclic
+            // machine may re-enter it as an ordinary step and be priced for it.
+            $frontier[] = [
+                $branch->target,
+                [$firstStep],
+                [$branch->target->id => true],
+                $firstStep->classification->weight(),
+            ];
         }
+
+        $this->bfs($frontier, $targetId, $paths);
 
         // Sort globally, not per branch: the loop above accumulates from every branch of the
         // trigger transition, so anything narrower would leave a cheap path found by a later
@@ -148,90 +172,79 @@ class ScenarioPathResolver
     }
 
     /**
-     * BFS from a start state to the target, building classified ScenarioPath steps.
+     * Walk one frontier to the target, recording every simple path that reaches it.
      *
+     * The frontier arrives already seeded by resolveAll(), which is what makes this a single
+     * search over every branch of the trigger rather than one search per branch. Expansion is
+     * still FIFO, so this is still breadth-first; ordering it by cost is a separate change.
+     *
+     * @param  list<array{0: StateDefinition, 1: list<ScenarioPathStep>, 2: array<string, true>, 3: int}>  $frontier
      * @param  list<ScenarioPath>  $results  Accumulated results (passed by reference).
-     * @param  array<int, string>  $startGuards
-     * @param  array<int, string>  $startActions
      */
-    private function bfs(
-        StateDefinition $startState,
-        string $startEvent,
-        array $startGuards,
-        array $startActions,
-        string $targetId,
-        array &$results,
-    ): void {
-        $firstStep = new ScenarioPathStep(
-            stateRoute: $this->routeKey($startState),
-            stateKey: $startState->key ?? '',
-            classification: $this->graph->classifyState($startState),
-            event: $startEvent,
-            guards: $startGuards,
-            actions: $startActions,
-            invokeClass: $this->getInvokeClass($startState),
-            availableEvents: $this->graph->availableEventsFrom($startState),
-            availableDoneStates: $this->graph->delegationOutcomes($startState),
-            entryActions: $this->getEntryActions($startState),
-        );
-
-        // Check if start IS the target
-        if ($startState->id === $targetId) {
-            $results[] = new ScenarioPath([$firstStep]);
-
-            return;
-        }
-
-        // BFS queue: [state, path-so-far, visited]
-        $queue   = [[$startState, [$firstStep], [$startState->id => true]]];
+    private function bfs(array $frontier, string $targetId, array &$results): void
+    {
+        // One budget for the whole resolution, not one per branch, counting expansions: one
+        // increment per entry taken off the frontier. For a multi-branch trigger the effective
+        // ceiling therefore drops — it used to be maxIterations times the branch count.
         $maxIter = $this->maxIterations;
         $iter    = 0;
 
-        while ($queue !== [] && $iter < $maxIter) {
+        while ($frontier !== [] && $iter < $maxIter) {
             $iter++;
-            [$currentState, $currentPath, $visited] = array_shift($queue);
+            [$currentState, $currentPath, $visited, $cost] = array_shift($frontier);
 
-            $nextStates = $this->getNextStates($currentState);
-
-            foreach ($nextStates as [$nextState, $nextEvent, $nextGuards, $nextActions]) {
+            foreach ($this->getNextStates($currentState) as [$nextState, $nextEvent, $nextGuards, $nextActions]) {
                 if (isset($visited[$nextState->id])) {
                     continue; // Cycle
                 }
 
-                $step = new ScenarioPathStep(
-                    stateRoute: $this->routeKey($nextState),
-                    stateKey: $nextState->key ?? '',
-                    classification: $this->graph->classifyState($nextState),
-                    event: $nextEvent,
-                    guards: $nextGuards,
-                    actions: $nextActions,
-                    invokeClass: $this->getInvokeClass($nextState),
-                    availableEvents: $this->graph->availableEventsFrom($nextState),
-                    availableDoneStates: $this->graph->delegationOutcomes($nextState),
-                    entryActions: $this->getEntryActions($nextState),
-                );
+                $step    = $this->step($nextState, $nextEvent, $nextGuards, $nextActions);
+                $newPath = [...$currentPath, $step];
 
-                $newPath                    = [...$currentPath, $step];
-                $newVisited                 = $visited;
-                $newVisited[$nextState->id] = true;
-
+                // Recorded when its final step is PUSHED. A target is never placed on the
+                // frontier and never expanded, so every path is recorded exactly once.
                 if ($nextState->id === $targetId) {
                     $results[] = new ScenarioPath($newPath);
 
                     continue; // Found one path, keep searching for alternatives
                 }
 
-                $queue[] = [$nextState, $newPath, $newVisited];
+                $newVisited                 = $visited;
+                $newVisited[$nextState->id] = true;
+
+                $frontier[] = [$nextState, $newPath, $newVisited, $cost + $step->classification->weight()];
             }
         }
 
-        // The loop can end two ways, and they mean opposite things: an empty queue is
+        // The loop can end two ways, and they mean opposite things: an empty frontier is
         // an exhausted search, while a non-empty one means the cap stopped us with work
         // still pending. Without recording that, a caller cannot tell "there is no path"
         // from "I stopped looking".
-        if ($queue !== []) {
+        if ($frontier !== []) {
             $this->truncated = true;
         }
+    }
+
+    /**
+     * Build the classified step for entering a state.
+     *
+     * @param  array<int, string>  $guards
+     * @param  array<int, string>  $actions
+     */
+    private function step(StateDefinition $state, string $event, array $guards, array $actions): ScenarioPathStep
+    {
+        return new ScenarioPathStep(
+            stateRoute: $this->routeKey($state),
+            stateKey: $state->key ?? '',
+            classification: $this->graph->classifyState($state),
+            event: $event,
+            guards: $guards,
+            actions: $actions,
+            invokeClass: $this->getInvokeClass($state),
+            availableEvents: $this->graph->availableEventsFrom($state),
+            availableDoneStates: $this->graph->delegationOutcomes($state),
+            entryActions: $this->getEntryActions($state),
+        );
     }
 
     /**
