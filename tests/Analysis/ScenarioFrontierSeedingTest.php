@@ -48,3 +48,17 @@ test('a cheap route below a later branch is returned before an expensive earlier
         ->and(scenarioStateKeys($paths[0]))->toContain('thrifty')
         ->and($weights)->toBe(collect($weights)->sort()->values()->all());
 });
+
+test('a cheap route reachable only through the trigger second branch is returned first', function (): void {
+    // SPLIT's own branches: costly (PARALLEL 5, @done to goal) first, thrifty (INTERACTIVE 1,
+    // CONFIRM to goal) second. Both become seeds on ONE frontier, so this is the shape the
+    // per-branch search got wrong — it would have exhausted the first branch before giving the
+    // second an expansion, and returned the weight-5 route ahead of the weight-1 one.
+    $paths = scenarioFrontierResolver()->resolveAll('split_entry', 'SPLIT', 'goal');
+
+    expect($paths)->toHaveCount(2)
+        ->and(scenarioStateKeys($paths[0]))->toBe(['thrifty', 'goal'])
+        ->and($paths[0]->totalWeight)->toBe(1)
+        ->and(scenarioStateKeys($paths[1]))->toBe(['costly', 'goal'])
+        ->and($paths[1]->totalWeight)->toBe(5);
+});
