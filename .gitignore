@@ -18,6 +18,7 @@ thoughts/
 .emdash.json
 codedb.snapshot
 .allegro.lock
+.zigrep_archive
 
 # Path-coverage exports. TracksPathCoverage writes one PID-suffixed file per worker to
 # getcwd()/storage/machine-path-coverage, so adopting it here leaves them in the repo root.
