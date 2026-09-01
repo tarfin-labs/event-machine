@@ -43,6 +43,41 @@ class ScenarioFrontierMachine extends Machine
                             ],
                             'CYCLE' => 'loop_a',
                             'FORK'  => 'fork',
+                            'TIE'   => [
+                                ['target' => 'tie_a', 'guards' => IsEligibleGuard::class],
+                                ['target' => 'tie_b'],
+                            ],
+                            'BUDGET' => [
+                                ['target' => 'free_1', 'guards' => IsEligibleGuard::class],
+                                ['target' => 'pricey'],
+                            ],
+                        ],
+                    ],
+
+                    // Two seeds of EQUAL cost reaching the same target. Under a cap of one
+                    // expansion, only the branch seeded first survives — which is requirement 2,
+                    // and the only shape a bare -$cost priority queue gets wrong.
+                    'tie_a'    => ['on' => ['VIA_A' => 'tie_goal']],
+                    'tie_b'    => ['on' => ['VIA_B' => 'tie_goal']],
+                    'tie_goal' => ['type' => 'final'],
+
+                    // A free chain against an expensive seed. Cost order spends the whole budget
+                    // walking the zero-weight route before the weight-5 seed is ever expanded, so
+                    // a target reachable only through the expensive one falls outside the cap.
+                    'free_1'   => ['on' => ['@always' => 'free_2']],
+                    'free_2'   => ['on' => ['@always' => 'free_3']],
+                    'free_3'   => ['on' => ['@always' => 'free_end']],
+                    'free_end' => ['type' => 'final'],
+                    'pricey'   => [
+                        'type'   => 'parallel',
+                        'states' => [
+                            'only_region' => [
+                                'initial' => 'inner',
+                                'states'  => [
+                                    'inner'     => ['on' => ['DIG' => 'deep_goal']],
+                                    'deep_goal' => ['type' => 'final'],
+                                ],
+                            ],
                         ],
                     ],
                     'hop' => [
