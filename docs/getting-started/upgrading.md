@@ -72,7 +72,7 @@ finding from "no path exists", and only the first is fixable by raising the numb
 ### `machine:scenario` output changes, including for a single path
 
 Each listed path's stats line gains a trailing `weight N`, and both commands' `--max-iterations`
-description no longer calls the search BFS or the cap per-branch. Less obviously: **a single-path
+description no longer calls the search BFS. Less obviously: **a single-path
 resolution now prints a listing where it previously printed nothing at all.** The listing was gated
 on there being more than one path; it now always renders, minus the `Use --path=N` hint. Update any
 test asserting these strings, and any parser that treated an absent listing as "one path".
