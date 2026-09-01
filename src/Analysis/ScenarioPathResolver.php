@@ -96,35 +96,33 @@ class ScenarioPathResolver
 
             // Try EventBehavior::getType() match.
             //
-            // is_subclass_of, not class_exists + method_exists: $event is a raw CLI argument, so
-            // class_exists() autoloads whatever it names and runs that file's top-level code
-            // before anything has established it is an event at all, and method_exists() then
-            // admits a non-static getType() — which raised `Non-static method cannot be called
-            // statically` from inside the resolver. Requiring an EventBehavior subclass settles
-            // the signature: getType() is then guaranteed to exist and to be static.
+            // is_subclass_of, not class_exists + method_exists: method_exists() admits a non-static
+            // getType(), which raised `Non-static method cannot be called statically` from inside
+            // the resolver. Requiring an EventBehavior subclass settles the signature — getType()
+            // is then guaranteed to exist and to be static.
             //
-            // It does NOT avoid the autoload. is_subclass_of() defaults to $allow_string = true,
-            // so it loads the named class exactly as class_exists() would; what it adds is the
-            // type check, not isolation. Two earlier versions of this comment claimed otherwise —
-            // first that no stranger is loaded, then that $event comes from the machine's own
-            // definition. Both are false, and the second is false on precisely this branch: the
-            // guard is consulted only when $eventTransition is null, which is to say only when
-            // $event did NOT match a transition key. An arbitrary FQCN never matches one, so it
-            // always reaches the autoload.
+            // It does NOT avoid the autoload. is_subclass_of() defaults to $allow_string = true, so
+            // it loads the named class exactly as class_exists() would; the type check is what it
+            // adds, not isolation. Nor could the input make that safe: this guard is consulted only
+            // when $eventTransition is null, so only when $event did not match a transition key,
+            // and an arbitrary FQCN never matches one.
             //
-            // The autoload is the feature, not a leak to be plugged. The command documents this
-            // argument as "class FQCN or event type string", and resolving an FQCN to its type
-            // means loading the class. Gating on class_exists($event, false) would make the
-            // sentence above true at the cost of silently failing to match any event class that
-            // was not already loaded — `::class` is a compile-time string, so nothing preloads an
-            // event named on the command line.
+            // The autoload is the feature rather than a leak to plug. The command documents this
+            // argument as "class FQCN or event type string", and resolving an FQCN to its type means
+            // loading the class. Gating on class_exists($event, false) would avoid the load at the
+            // cost of silently failing to match any event class not already loaded — `::class` is a
+            // compile-time string, so nothing preloads an event named on the command line.
             //
-            // Two callers reach here. `machine:scenario` passes its `event` argument straight
-            // through, chosen at the command line. `machine:scenario-validate` arrives via
+            // Two callers reach here, both CLI. `machine:scenario` passes its `event` argument
+            // straight through, chosen at the command line. `machine:scenario-validate` arrives via
             // ScenarioValidator::validatePaths(), where the value is the scenario class's own
-            // `protected string $event` and MachineScenario::eventType() has already loaded it by
-            // the same means. So the residual exposure is a developer running one of those two
-            // commands over input they control, which is authority those commands already have.
+            // `protected string $event`, already loaded by the class_exists() in that validator's
+            // earlier checkEventValidFromSource() pass. So the residual exposure is a developer
+            // running one of those two commands over input they control, which is authority those
+            // commands already have.
+            //
+            // Three earlier revisions of this comment each asserted something false about the line
+            // below. Verify against the code, not against this paragraph.
             if ($eventTransition === null && is_subclass_of($event, EventBehavior::class)) {
                 foreach ($transitions as $eventKey => $transition) {
                     if ($eventKey === $event::getType()) {
