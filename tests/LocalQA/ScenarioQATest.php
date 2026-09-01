@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
+use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Routing\MachineRouter;
 use Tarfinlabs\EventMachine\Scenarios\ScenarioPlayer;
@@ -55,7 +56,7 @@ it('LocalQA: executeChildScenario with real delegation — child reaches final s
     );
 
     // With real Horizon, delegation completes and child reaches final state
-    if ($state !== null) {
+    if ($state instanceof State) {
         $reachedFinal = collect($state->value)->contains(fn (string $v) => str_contains($v, 'verified'));
         expect($reachedFinal)->toBeTrue('Child did not reach verified state');
     } else {
@@ -274,12 +275,9 @@ it('LocalQA: @continue through multiple interactive states via single scenario e
 
     // HappyPathScenario has @continue at reviewing → APPROVE → approved
     // This goes through: idle → routing → processing(@done) → reviewing → @continue(APPROVE) → approved
-    $state = $player->execute();
-
-    if ($state !== null) {
-        $reachedApproved = collect($state->value)->contains(fn (string $v) => str_contains($v, 'approved'));
-        expect($reachedApproved)->toBeTrue('@continue did not chain to approved');
-    }
+    $state           = $player->execute();
+    $reachedApproved = collect($state->value)->contains(fn (string $v) => str_contains($v, 'approved'));
+    expect($reachedApproved)->toBeTrue('@continue did not chain to approved');
 });
 
 it('LocalQA: forward endpoint active after child scenario pauses at interactive', function (): void {

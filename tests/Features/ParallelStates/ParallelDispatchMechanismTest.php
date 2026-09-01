@@ -311,7 +311,7 @@ it('sets queue from config when configured', function (): void {
 it('uses default queue when config queue is null', function (): void {
     Bus::fake();
     config()->set('machine.parallel_dispatch.enabled', true);
-    config()->set('machine.parallel_dispatch.queue', null);
+    config()->set('machine.parallel_dispatch.queue');
 
     $machine = AsdMachine::create();
 

@@ -166,7 +166,7 @@ it('define() accepts multiple schedules', function (): void {
         ],
         schedules: [
             'CHECK_EXPIRY'  => 'App\\Resolvers\\ExpiredResolver',
-            'SEND_REMINDER' => fn () => collect(),
+            'SEND_REMINDER' => collect(...),
         ],
     );
 

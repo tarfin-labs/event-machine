@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Tarfinlabs\EventMachine\Analysis\MachinePath;
 use Tarfinlabs\EventMachine\Analysis\MachineGraph;
 use Tarfinlabs\EventMachine\Analysis\PathEnumerator;
 use Tarfinlabs\EventMachine\Analysis\PathCoverageReport;
@@ -105,7 +106,7 @@ test('a region that truncates raises the flag on the top-level result', function
         }
     }
 
-    $regionTypes = array_map(static fn ($path): string => $path->type->value, $regionPaths);
+    $regionTypes = array_map(static fn (MachinePath $path): string => $path->type->value, $regionPaths);
 
     expect($regionTypes)->toContain('truncated')
         ->and($result->depthLimitReached)->toBeTrue()

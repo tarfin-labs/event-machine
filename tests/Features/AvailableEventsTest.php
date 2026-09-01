@@ -249,7 +249,6 @@ test('it returns empty array for final state', function (): void {
 test('it returns empty array when current state definition is null', function (): void {
     $state = State::forTesting(
         context: [],
-        currentStateDefinition: null,
     );
 
     expect($state->availableEvents())->toBe([]);

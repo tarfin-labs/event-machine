@@ -39,7 +39,6 @@ it('it should return a machine', function (): void {
 // === Model Attributes to Machines Tests ===
 
 it('can persist the machine state', function (): void {
-    /** @var ModelA $a */
     $modelA = ModelA::create([
         'value' => 'some value',
     ]);

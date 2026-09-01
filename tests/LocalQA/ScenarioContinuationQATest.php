@@ -336,7 +336,6 @@ it('LocalQA: child scenario with @continue + outcomes reaches target', function 
     // Child scenario uses @continue at review + @done outcomes at both job actors
 
     $isActiveRef = new ReflectionProperty(ScenarioPlayer::class, 'isActive');
-    $isActiveRef->setAccessible(true);
     $isActiveRef->setValue(null, true);
 
     $childScenario = new class() extends MachineScenario {
@@ -373,7 +372,6 @@ it('LocalQA: parent→child scenario→pause→persist — child persisted and r
     // child pauses at interactive state, child persisted to DB with scenario_class.
 
     $isActiveRef = new ReflectionProperty(ScenarioPlayer::class, 'isActive');
-    $isActiveRef->setAccessible(true);
     $isActiveRef->setValue(null, true);
 
     // Execute child scenario with parent context
@@ -414,7 +412,6 @@ it('LocalQA: parent→child scenario→pause→persist — child persisted and r
 
 it('LocalQA: plan vs continuation same guard — continuation override wins after DB restore', function (): void {
     $isActiveRef = new ReflectionProperty(ScenarioPlayer::class, 'isActive');
-    $isActiveRef->setAccessible(true);
     $isActiveRef->setValue(null, true);
 
     // KEY: plan has IsRetryableGuard=TRUE, continuation has FALSE.

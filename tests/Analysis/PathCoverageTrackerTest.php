@@ -13,7 +13,7 @@ beforeEach(function (): void {
 test('tracker records transitions and builds signature on completePath', function (): void {
     PathCoverageTracker::enable();
 
-    PathCoverageTracker::recordTransition('App\\Machine', 'machine.idle', null);
+    PathCoverageTracker::recordTransition('App\\Machine', 'machine.idle');
     PathCoverageTracker::recordTransition('App\\Machine', 'machine.done', '@always');
     PathCoverageTracker::completePath('App\\Machine');
 
@@ -24,7 +24,7 @@ test('tracker records transitions and builds signature on completePath', functio
 
 test('tracker does not record when disabled', function (): void {
     // Not enabled
-    PathCoverageTracker::recordTransition('App\\Machine', 'machine.idle', null);
+    PathCoverageTracker::recordTransition('App\\Machine', 'machine.idle');
     PathCoverageTracker::completePath('App\\Machine');
 
     expect(PathCoverageTracker::observedPaths('App\\Machine'))->toBe([]);
@@ -34,12 +34,12 @@ test('completePath resets active path for new recording', function (): void {
     PathCoverageTracker::enable();
 
     // First path
-    PathCoverageTracker::recordTransition('App\\Machine', 'machine.idle', null);
+    PathCoverageTracker::recordTransition('App\\Machine', 'machine.idle');
     PathCoverageTracker::recordTransition('App\\Machine', 'machine.done', 'GO');
     PathCoverageTracker::completePath('App\\Machine');
 
     // Second path
-    PathCoverageTracker::recordTransition('App\\Machine', 'machine.idle', null);
+    PathCoverageTracker::recordTransition('App\\Machine', 'machine.idle');
     PathCoverageTracker::recordTransition('App\\Machine', 'machine.failed', '@fail');
     PathCoverageTracker::completePath('App\\Machine');
 
@@ -51,7 +51,7 @@ test('completePath resets active path for new recording', function (): void {
 
 test('reset clears all state', function (): void {
     PathCoverageTracker::enable();
-    PathCoverageTracker::recordTransition('App\\Machine', 'machine.idle', null);
+    PathCoverageTracker::recordTransition('App\\Machine', 'machine.idle');
     PathCoverageTracker::completePath('App\\Machine');
 
     PathCoverageTracker::reset();
@@ -62,7 +62,7 @@ test('reset clears all state', function (): void {
 
 test('export and import roundtrip preserves data', function (): void {
     PathCoverageTracker::enable();
-    PathCoverageTracker::recordTransition('App\\Machine', 'machine.idle', null);
+    PathCoverageTracker::recordTransition('App\\Machine', 'machine.idle');
     PathCoverageTracker::recordTransition('App\\Machine', 'machine.done', '@always');
     PathCoverageTracker::completePath('App\\Machine');
 
@@ -83,7 +83,7 @@ test('export and import roundtrip preserves data', function (): void {
 
 test('exportToDirectory writes PID-suffixed file', function (): void {
     PathCoverageTracker::enable();
-    PathCoverageTracker::recordTransition('App\\Machine', 'machine.idle', null);
+    PathCoverageTracker::recordTransition('App\\Machine', 'machine.idle');
     PathCoverageTracker::completePath('App\\Machine');
 
     $tmpDir = sys_get_temp_dir().'/pca_test_dir_'.getmypid();

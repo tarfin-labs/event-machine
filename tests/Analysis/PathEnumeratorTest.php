@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
+use Tarfinlabs\EventMachine\Analysis\PathStep;
 use Tarfinlabs\EventMachine\Analysis\PathType;
+use Tarfinlabs\EventMachine\Analysis\MachinePath;
 use Tarfinlabs\EventMachine\Analysis\PathEnumerator;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\AbcMachine;
@@ -224,7 +226,7 @@ test('AfterTimerMachine enumerates 2 paths: HAPPY + TIMEOUT', function (): void 
 
     // Verify timer metadata on the timeout path
     $timeoutPath = $result->timeoutPaths()[0];
-    $timerSteps  = array_filter($timeoutPath->steps, fn ($s) => $s->timerType !== null);
+    $timerSteps  = array_filter($timeoutPath->steps, fn (PathStep $s) => $s->timerType !== null);
     expect($timerSteps)->not->toBeEmpty();
 });
 
@@ -415,7 +417,7 @@ test('multi-branch @always with unguarded fallback is exclusive — no guard-fai
         ->and($result->guardBlockPaths())->toHaveCount(0)
         ->and($result->deadEndPaths())->toHaveCount(0);
 
-    $terminals = array_map(fn ($p) => $p->terminalStateId, $result->happyPaths());
+    $terminals = array_map(fn (MachinePath $p) => $p->terminalStateId, $result->happyPaths());
     expect($terminals)->not->toContain('always_fallback_test.unreachable');
 });
 
@@ -448,11 +450,11 @@ test('LOOP paths include the cycle target step to distinguish different loops', 
     $result = (new PathEnumerator($definition))->enumerate();
 
     // All signatures must be unique
-    $signatures = array_map(fn ($p) => $p->signature(), $result->paths);
+    $signatures = array_map(fn (MachinePath $p) => $p->signature(), $result->paths);
     expect(count($signatures))->toBe(count(array_unique($signatures)));
 
     // Both @done→awaiting and @fail→awaiting are LOOP but with different cycle targets/events
-    $loopSigs = array_map(fn ($p) => $p->signature(), $result->loopPaths());
+    $loopSigs = array_map(fn (MachinePath $p) => $p->signature(), $result->loopPaths());
     expect($loopSigs)->each->toContain('awaiting');
 
     // @done loop and @fail loop should have different signatures (different events)

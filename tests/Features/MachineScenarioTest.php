@@ -108,7 +108,6 @@ test('param() returns hydrated value after hydrateParams', function (): void {
 
     // Use reflection to access protected param()
     $reflection = new ReflectionMethod($scenario, 'param');
-    $reflection->setAccessible(true);
 
     expect($reflection->invoke($scenario, 'amount'))->toBe(99);
 });
@@ -118,7 +117,6 @@ test('param() returns default when key not present', function (): void {
     $scenario->hydrateParams(['amount' => 1]);
 
     $reflection = new ReflectionMethod($scenario, 'param');
-    $reflection->setAccessible(true);
 
     expect($reflection->invoke($scenario, 'missing_key', 'default_val'))->toBe('default_val');
 });

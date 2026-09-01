@@ -837,7 +837,6 @@ it('ChildMachineDoneEvent.finalState() returns key not full ID (T7)', function (
 
 it('ChildMachineDoneEvent.finalState() returns null for legacy events (T8)', function (): void {
     $event = ChildMachineDoneEvent::forChild([
-        'output'        => null,
         'output'        => [],
         'machine_id'    => 'test-123',
         'machine_class' => ImmediateChildMachine::class,
@@ -872,7 +871,6 @@ it('@done.{state} coexists with @fail independently (T9)', function (): void {
 });
 
 it('@done.{state} action receives output, result, and finalState together (T10)', function (): void {
-    $capturedOutput     = null;
     $capturedOutput     = null;
     $capturedFinalState = null;
 

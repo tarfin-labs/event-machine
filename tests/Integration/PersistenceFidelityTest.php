@@ -39,7 +39,7 @@ it('preserves state, context, and event history identically after archive and re
         'sequence_number' => $e->sequence_number,
         'payload'         => $e->payload,
         'machine_value'   => $e->machine_value,
-    ])->toArray();
+    ])->all();
 
     // Archive the machine
     $archiveService = new ArchiveService();
@@ -59,7 +59,7 @@ it('preserves state, context, and event history identically after archive and re
         'sequence_number' => $e->sequence_number,
         'payload'         => $e->payload,
         'machine_value'   => $e->machine_value,
-    ])->toArray();
+    ])->all();
 
     expect($historyAfter)->toBe($historyBefore);
 });
@@ -177,9 +177,10 @@ it('preserves event history in correct chronological order after persist and res
     $originalTypes = $machine->state->history
         ->pluck('type')
         ->toArray();
+    $counter = count($originalSequenceNumbers);
 
     // Verify sequence numbers are strictly ascending
-    for ($i = 1; $i < count($originalSequenceNumbers); $i++) {
+    for ($i = 1; $i < $counter; $i++) {
         expect($originalSequenceNumbers[$i])->toBeGreaterThan($originalSequenceNumbers[$i - 1]);
     }
 
@@ -200,9 +201,10 @@ it('preserves event history in correct chronological order after persist and res
 
     // Event types should be in the same order
     expect($restoredTypes)->toBe($originalTypes);
+    $counter = count($restoredSequenceNumbers);
 
     // Restored sequence numbers must still be strictly ascending
-    for ($i = 1; $i < count($restoredSequenceNumbers); $i++) {
+    for ($i = 1; $i < $counter; $i++) {
         expect($restoredSequenceNumbers[$i])->toBeGreaterThan($restoredSequenceNumbers[$i - 1]);
     }
 

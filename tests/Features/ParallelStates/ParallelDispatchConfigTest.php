@@ -122,7 +122,7 @@ it('builds MachineLockTimeoutException in blocking mode', function (): void {
 it('builds MachineLockTimeoutException with holder info', function (): void {
     // We can't easily create a MachineStateLock without the table existing,
     // so we test the without-holder path thoroughly
-    $exception = MachineLockTimeoutException::build('root-123', 0, null);
+    $exception = MachineLockTimeoutException::build('root-123', 0);
 
     expect($exception->getMessage())->not->toContain('Held by');
 });

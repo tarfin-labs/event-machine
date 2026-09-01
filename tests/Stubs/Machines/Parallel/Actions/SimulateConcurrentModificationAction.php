@@ -26,7 +26,7 @@ class SimulateConcurrentModificationAction extends ActionBehavior
             $context->set('concurrentData', 'processed');
         }
 
-        if (static::$onExecute !== null) {
+        if (static::$onExecute instanceof Closure) {
             (static::$onExecute)();
         }
     }

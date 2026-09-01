@@ -223,7 +223,7 @@ it('dispatches ChildMachineJob with fireAndForget flag', function (): void {
 
     Queue::assertPushed(ChildMachineJob::class, function (ChildMachineJob $job): bool {
         return $job->childMachineClass === ImmediateChildMachine::class
-            && $job->fireAndForget === true
+            && $job->fireAndForget
             && $job->machineChildId === '';
     });
 });
@@ -293,7 +293,7 @@ it('child dispatched with correct context via @always pattern', function (): voi
 
     Queue::assertPushed(ChildMachineJob::class, function (ChildMachineJob $job): bool {
         return $job->childContext === ['tckn' => '12345678901']
-            && $job->fireAndForget === true;
+            && $job->fireAndForget;
     });
 });
 

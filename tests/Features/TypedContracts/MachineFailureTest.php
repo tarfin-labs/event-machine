@@ -23,7 +23,7 @@ test('fromException maps $previous to getPrevious()', function (): void {
     $e        = new RuntimeException('Wrapper', 0, $previous);
 
     // Use a failure class with $previous param
-    $failureClass = new class('test', null) extends MachineFailure {
+    $failureClass = new class('test') extends MachineFailure {
         public function __construct(
             public readonly string $message,
             public readonly ?Throwable $previous = null,

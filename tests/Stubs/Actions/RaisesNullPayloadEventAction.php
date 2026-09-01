@@ -11,6 +11,6 @@ class RaisesNullPayloadEventAction extends ActionBehavior
 {
     public function __invoke(): void
     {
-        $this->raise(new PayloadedTestEvent(payload: null));
+        $this->raise(new PayloadedTestEvent());
     }
 }

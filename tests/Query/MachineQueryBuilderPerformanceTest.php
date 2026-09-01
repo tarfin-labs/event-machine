@@ -23,7 +23,7 @@ describe('N+1 Protection — no unnecessary Machine restore', function (): void 
         DB::disableQueryLog();
 
         // get() should only query machine_current_states, never machine_events
-        $eventQueries = array_filter($queries, fn ($q) => str_contains($q['query'], 'machine_events'));
+        $eventQueries = array_filter($queries, fn (array $q) => str_contains($q['query'], 'machine_events'));
         expect($eventQueries)->toBeEmpty('get() should not query machine_events');
         expect($results)->toHaveCount(2);
     });
@@ -58,7 +58,7 @@ describe('N+1 Protection — no unnecessary Machine restore', function (): void 
         $queries = DB::getQueryLog();
         DB::disableQueryLog();
 
-        $eventQueries = array_filter($queries, fn ($q) => str_contains($q['query'], 'machine_events'));
+        $eventQueries = array_filter($queries, fn (array $q) => str_contains($q['query'], 'machine_events'));
         expect($eventQueries)->toBeEmpty('pluckMachineIds() should not query machine_events');
         expect($ids)->toHaveCount(1);
     });
@@ -73,9 +73,6 @@ describe('N+1 Protection — no unnecessary Machine restore', function (): void 
 
         // Access all lightweight properties
         foreach ($results as $result) {
-            $_ = $result->machineId;
-            $_ = $result->stateId;
-            $_ = $result->stateEnteredAt;
             $_ = $result->stateIds;
         }
 
@@ -129,7 +126,7 @@ describe('N+1 Protection — no unnecessary Machine restore', function (): void 
 
         // Should only have queries against machine_current_states (2: buildIds + hydrate)
         // Never machine_events
-        $eventQueries = array_filter($queries, fn ($q) => str_contains($q['query'], 'machine_events'));
+        $eventQueries = array_filter($queries, fn (array $q) => str_contains($q['query'], 'machine_events'));
         expect($eventQueries)->toBeEmpty('Listing 20 results should not trigger any machine_events queries');
 
         // Should not have 20+ queries (N+1 would mean 20 individual restores)

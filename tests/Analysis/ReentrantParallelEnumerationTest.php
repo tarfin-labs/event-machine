@@ -37,10 +37,7 @@ function enumerateOutOfProcess(string $machineClass, ?int $maxDepth = null): arr
     } catch (Throwable $e) {
         // Non-termination is one of the two failure modes this harness exists to catch,
         // so it has to surface as a legible failure rather than as a stalled suite.
-        throw new RuntimeException(
-            "Enumeration subprocess did not finish within its bound for {$machineClass}: {$e->getMessage()}",
-            previous: $e,
-        );
+        throw new RuntimeException("Enumeration subprocess did not finish within its bound for {$machineClass}: {$e->getMessage()}", $e->getCode(), previous: $e);
     }
 
     expect($process->getExitCode())->toBe(

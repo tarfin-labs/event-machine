@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\AbcMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ScenarioTestMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Scenarios\HappyPathScenario;
 
 // ── Single machine ───────────────────────────────────────────────────────────
 
@@ -99,7 +100,7 @@ test('--scenario=ClassName filters by class basename', function (): void {
 });
 
 test('--scenario=FQCN filters by fully qualified class name', function (): void {
-    $fqcn = 'Tarfinlabs\\EventMachine\\Tests\\Stubs\\Machines\\ScenarioStubs\\Scenarios\\HappyPathScenario';
+    $fqcn = HappyPathScenario::class;
     $this->artisan('machine:scenario-validate', [
         'machine'    => ScenarioTestMachine::class,
         '--scenario' => $fqcn,

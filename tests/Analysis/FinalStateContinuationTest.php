@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Tarfinlabs\EventMachine\Analysis\MachinePath;
 use Tarfinlabs\EventMachine\Analysis\PathEnumerator;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 
@@ -11,7 +12,7 @@ use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 function finalPathSignatures(MachineDefinition $definition): array
 {
     return array_map(
-        static fn ($path): string => $path->signature(),
+        static fn (MachinePath $path): string => $path->signature(),
         (new PathEnumerator($definition))->enumerate()->paths,
     );
 }

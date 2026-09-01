@@ -49,7 +49,6 @@ test('child machine created with shouldPersist=false', function (): void {
 
 test('child scenario overrides don\'t leak to parent outcomes', function (): void {
     $reflection = new ReflectionProperty(ScenarioPlayer::class, 'outcomes');
-    $reflection->setAccessible(true);
     $reflection->setValue(null, ['parent_state' => '@done']);
 
     ScenarioPlayer::executeChildScenario(
@@ -74,7 +73,7 @@ test('child machine with transient initial state — @always chain runs with ove
     // Child pauses at verifying (delegation skipped in test mode)
     // But the @always chain DID run: idle → verifying
     // The state is either null (paused) or State (if reached final)
-    if ($state !== null) {
+    if ($state instanceof State) {
         // If state-aware overrides worked and delegation was somehow resolved
         $stateValues = $state->value;
         $pastIdle    = collect($stateValues)->contains(fn (string $v): bool => !str_contains($v, 'idle'));
@@ -106,7 +105,6 @@ test('child scenario with job actor outcomes — outcomes intercept job dispatch
 
     // Simulate parent execute() context — isActive must be true for outcome interception
     $isActiveRef = new ReflectionProperty(ScenarioPlayer::class, 'isActive');
-    $isActiveRef->setAccessible(true);
     $isActiveRef->setValue(null, true);
 
     $childScenarioClass = new class() extends MachineScenario {
@@ -145,7 +143,6 @@ test('child scenario with @continue + outcomes — multi-hop pattern', function 
     // Child scenario: first_job @done, review @continue APPROVE, second_job @done
 
     $isActiveRef = new ReflectionProperty(ScenarioPlayer::class, 'isActive');
-    $isActiveRef->setAccessible(true);
     $isActiveRef->setValue(null, true);
 
     $childScenarioClass = new class() extends MachineScenario {
@@ -184,7 +181,6 @@ test('child scenario with @continue + outcomes — multi-hop pattern', function 
 
 test('child scenario pausing at interactive state persists child to DB', function (): void {
     $isActiveRef = new ReflectionProperty(ScenarioPlayer::class, 'isActive');
-    $isActiveRef->setAccessible(true);
     $isActiveRef->setValue(null, true);
 
     $childScenarioClass = new class() extends MachineScenario {
@@ -232,7 +228,6 @@ test('child scenario receives parent context via resolveChildContext', function 
     // The child scenario's plan uses @always chain — check child context is populated.
 
     $isActiveRef = new ReflectionProperty(ScenarioPlayer::class, 'isActive');
-    $isActiveRef->setAccessible(true);
     $isActiveRef->setValue(null, true);
 
     // CallableOutcomeMachine has no input config, so context is empty by default.
@@ -271,7 +266,6 @@ test('child scenario receives parent context via resolveChildContext', function 
 
 test('child reaching final state does NOT persist', function (): void {
     $isActiveRef = new ReflectionProperty(ScenarioPlayer::class, 'isActive');
-    $isActiveRef->setAccessible(true);
     $isActiveRef->setValue(null, true);
 
     $countBefore      = MachineCurrentState::count();
@@ -297,7 +291,6 @@ test('child reaching final state does NOT persist', function (): void {
 
 test('child with continuation persists scenario_class', function (): void {
     $isActiveRef = new ReflectionProperty(ScenarioPlayer::class, 'isActive');
-    $isActiveRef->setAccessible(true);
     $isActiveRef->setValue(null, true);
 
     // CallableOutcomeScenario has continuation() — scenario_class should be persisted
@@ -327,7 +320,6 @@ test('child with continuation persists scenario_class', function (): void {
 
 test('persisted child is restorable via Machine::create', function (): void {
     $isActiveRef = new ReflectionProperty(ScenarioPlayer::class, 'isActive');
-    $isActiveRef->setAccessible(true);
     $isActiveRef->setValue(null, true);
 
     ScenarioPlayer::executeChildScenario(
@@ -351,7 +343,6 @@ test('persisted child is restorable via Machine::create', function (): void {
 
 test('child @continue failure throws ScenarioFailedException', function (): void {
     $isActiveRef = new ReflectionProperty(ScenarioPlayer::class, 'isActive');
-    $isActiveRef->setAccessible(true);
     $isActiveRef->setValue(null, true);
 
     $childScenarioClass = new class() extends MachineScenario {

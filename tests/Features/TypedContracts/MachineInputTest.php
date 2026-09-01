@@ -30,7 +30,7 @@ test('fromContext uses default value when context key missing but default exists
 });
 
 test('fromContext uses null when context key missing but param is nullable', function (): void {
-    $inputClass = new class('test', 100, null) extends MachineInput {
+    $inputClass = new class('test', 100) extends MachineInput {
         public function __construct(
             public readonly string $orderId,
             public readonly int $amount,

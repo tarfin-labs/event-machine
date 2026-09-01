@@ -57,7 +57,7 @@ test('it resolves conditional @done in async mode with null EventBehavior', func
 
     // Simulate async: null EventBehavior (as ParallelRegionJob passes null)
     $parallelState = $definition->idMap['test_async_done.processing'];
-    $state         = $definition->processParallelOnDone($parallelState, $state, null);
+    $state         = $definition->processParallelOnDone($parallelState, $state);
 
     // Guard evaluates with synthetic EventBehavior → approved
     expect($state->value)->toBe(['test_async_done.approved'])
@@ -110,7 +110,7 @@ test('it handles null EventBehavior with synthetic event on guard failure', func
 
     // Null EventBehavior, guard fails → fallback to manual_review
     $parallelState = $definition->idMap['test_async_fallback.processing'];
-    $state         = $definition->processParallelOnDone($parallelState, $state, null);
+    $state         = $definition->processParallelOnDone($parallelState, $state);
 
     expect($state->value)->toBe(['test_async_fallback.manual_review'])
         ->and(NotifyReviewerAction::wasExecuted())->toBeTrue();
@@ -162,7 +162,7 @@ test('it resolves conditional @fail in async timeout with null EventBehavior', f
 
     // Null EventBehavior (as ParallelRegionTimeoutJob passes null), retry_count=5 → failed
     $parallelState = $definition->idMap['test_async_fail.processing'];
-    $state         = $definition->processParallelOnFail($parallelState, $state, null);
+    $state         = $definition->processParallelOnFail($parallelState, $state);
 
     expect($state->value)->toBe(['test_async_fail.failed'])
         ->and(SendAlertAction::wasExecuted())->toBeTrue()

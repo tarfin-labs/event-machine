@@ -12,10 +12,6 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Failures\PaymentFailure;
 
 class TypedSuccessfulJob implements ProvidesFailure, ReturnsOutput
 {
-    public function __construct(
-        private readonly string $orderId = '',
-    ) {}
-
     public function handle(): void
     {
         // Simulates successful work

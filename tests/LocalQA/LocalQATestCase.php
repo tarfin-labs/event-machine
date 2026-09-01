@@ -61,7 +61,7 @@ class LocalQATestCase extends Orchestra
     {
         // 1. Drain pending + delayed queues (stop NEW jobs from being picked up).
         // Do NOT delete reserved — those are in-flight, workers will finish them.
-        $redis  = app('redis');
+        $redis  = resolve('redis');
         $prefix = config('database.redis.options.prefix', 'laravel_database_');
 
         foreach (['default', 'child-queue'] as $queue) {
@@ -73,7 +73,7 @@ class LocalQATestCase extends Orchestra
         // 2. Wait for in-flight (reserved) jobs to finish naturally.
         // Workers that already picked up a job will complete it and remove from reserved.
         // We must wait for reserved=0 before truncating tables.
-        static::waitForIdleWorkers($redis, $prefix);
+        self::waitForIdleWorkers($redis, $prefix);
 
         // 3. Now safe to truncate — no workers are writing to these tables
         DB::statement('SET FOREIGN_KEY_CHECKS=0;');

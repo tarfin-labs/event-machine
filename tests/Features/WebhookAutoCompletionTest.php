@@ -50,7 +50,7 @@ it('auto-dispatches completion job when child reaches final state via endpoint',
             && $job->parentMachineClass === AsyncParentMachine::class
             && $job->parentStateId === 'async_parent.processing'
             && $job->childMachineClass === SimpleChildMachine::class
-            && $job->success === true;
+            && $job->success;
     });
 
     // 7. Verify: MachineChild record marked as completed

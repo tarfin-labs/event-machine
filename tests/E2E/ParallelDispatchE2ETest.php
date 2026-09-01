@@ -589,7 +589,7 @@ it('uses configured queue name for dispatched jobs', function (): void {
         return $job->queue === 'custom-parallel';
     });
 
-    config()->set('machine.parallel_dispatch.queue', null);
+    config()->set('machine.parallel_dispatch.queue');
 });
 
 it('applies configured timeout tries and backoff to dispatched jobs', function (): void {
@@ -617,7 +617,7 @@ it('applies configured timeout tries and backoff to dispatched jobs', function (
 it('uses default queue when no queue name configured', function (): void {
     Bus::fake();
 
-    config()->set('machine.parallel_dispatch.queue', null);
+    config()->set('machine.parallel_dispatch.queue');
 
     $machine = E2EBasicMachine::create();
     $machine->persist();

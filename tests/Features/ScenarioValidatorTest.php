@@ -24,7 +24,7 @@ function makeScenario(array $overrides = []): MachineScenario
     $plan        = $overrides['plan'] ?? [];
 
     return new class($machine, $source, $event, $target, $description, $plan) extends MachineScenario {
-        private array $planData;
+        private readonly array $planData;
 
         public function __construct(
             string $machine,
@@ -183,7 +183,7 @@ test('@start valid when source is machine\'s initial state', function (): void {
     $errors    = $validator->validate();
 
     // idle is the initial state — @start is valid
-    $startErrors = array_filter($errors, fn ($e) => str_contains($e, '@start'));
+    $startErrors = array_filter($errors, fn (string $e) => str_contains($e, '@start'));
     expect($startErrors)->toBeEmpty();
 });
 
@@ -253,7 +253,7 @@ test('behavior override array on delegation state — accepted without error', f
     $errors    = $validator->validate();
 
     // Should NOT have an error about delegation state
-    $delegationErrors = array_filter($errors, fn ($e) => str_contains($e, 'delegation'));
+    $delegationErrors = array_filter($errors, fn (string $e) => str_contains($e, 'delegation'));
     expect($delegationErrors)->toBeEmpty();
 });
 
@@ -310,7 +310,7 @@ test('deep target missing child scenario', function (): void {
     $errors    = $validator->validatePaths();
 
     // No deep target error for non-deep target
-    $deepErrors = array_filter($errors, fn ($e) => str_contains($e, 'Deep target'));
+    $deepErrors = array_filter($errors, fn (string $e) => str_contains($e, 'Deep target'));
     expect($deepErrors)->toBeEmpty();
 });
 
@@ -334,10 +334,10 @@ function makeContinuationScenario(array $continuation, array $overrides = []): M
 
     return new class($machine, $source, $event, $target, $description, $plan, $continuation) extends MachineScenario {
         /** @var array<string, mixed> */
-        private array $planData;
+        private readonly array $planData;
 
         /** @var array<string, mixed> */
-        private array $continuationData;
+        private readonly array $continuationData;
 
         public function __construct(
             string $machine,
@@ -417,7 +417,7 @@ test('callable outcome in plan is valid on delegation state', function (): void 
     $errors    = $validator->validate();
 
     // processing IS a delegation state — callable outcome should be valid
-    $outcomeErrors = array_filter($errors, fn ($e): bool => str_contains($e, 'delegation outcome'));
+    $outcomeErrors = array_filter($errors, fn (string $e): bool => str_contains($e, 'delegation outcome'));
     expect($outcomeErrors)->toBeEmpty();
 });
 
@@ -433,6 +433,6 @@ test('callable outcome in continuation is valid on delegation state', function (
     $errors    = $validator->validate();
 
     // delegating IS a delegation state — callable outcome should be valid
-    $outcomeErrors = array_filter($errors, fn ($e): bool => str_contains($e, 'delegation outcome'));
+    $outcomeErrors = array_filter($errors, fn (string $e): bool => str_contains($e, 'delegation outcome'));
     expect($outcomeErrors)->toBeEmpty();
 });

@@ -795,7 +795,7 @@ describe('§J — Edge cases', function (): void {
             behavior: [
                 'actions' => [
                     'nullAction' => function (ContextManager $ctx, ?string $value): void {
-                        $ctx->set('result', $value === null ? 'was_null' : $value);
+                        $ctx->set('result', $value ?? 'was_null');
                     },
                 ],
             ],

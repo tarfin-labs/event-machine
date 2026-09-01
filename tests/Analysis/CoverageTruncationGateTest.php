@@ -5,6 +5,7 @@ declare(strict_types=1);
 use PHPUnit\Framework\AssertionFailedError;
 use Tarfinlabs\EventMachine\Analysis\MachineGraph;
 use Tarfinlabs\EventMachine\Analysis\PathEnumerator;
+use Tarfinlabs\EventMachine\Analysis\ScenarioPathStep;
 use Tarfinlabs\EventMachine\Analysis\PathCoverageReport;
 use Tarfinlabs\EventMachine\Analysis\PathCoverageTracker;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
@@ -178,7 +179,7 @@ test('the resolver marks region entry distinctly from compound entry', function 
 
     expect($paths)->toHaveCount(1);
 
-    $events = array_map(static fn ($step): ?string => $step->event, $paths[0]->steps);
+    $events = array_map(static fn (ScenarioPathStep $step): ?string => $step->event, $paths[0]->steps);
 
     // @region, not @entry: entering a parallel state activates every region at once, so
     // this route is a projection of a concurrent configuration rather than an exclusive

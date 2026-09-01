@@ -10,10 +10,6 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Failures\PaymentFailure;
 
 class TypedFailingJob implements ProvidesFailure
 {
-    public function __construct(
-        private readonly string $orderId = '',
-    ) {}
-
     public function handle(): void
     {
         throw new \RuntimeException('Payment gateway unavailable', 503);

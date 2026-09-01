@@ -108,7 +108,7 @@ it('processParallelOnFail with eventBehavior=null works', function (): void {
     $parallelState = $machine->idMap['test.parallel_state'];
 
     // Explicitly pass null — should not throw
-    $result = $machine->processParallelOnFail($parallelState, $state, null);
+    $result = $machine->processParallelOnFail($parallelState, $state);
 
     expect($result->value)->toBe(['test.failed']);
 });

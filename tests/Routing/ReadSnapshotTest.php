@@ -158,7 +158,7 @@ test('a read of an archived machine restores transparently and returns 200', fun
 
     $id = makeReadsInstance();
 
-    app(ArchiveService::class)->archiveMachine($id);
+    resolve(ArchiveService::class)->archiveMachine($id);
     expect(MachineEvent::where('root_event_id', $id)->count())->toBe(0); // moved to the archive
 
     $response = $this->getJson("/api/reads/{$id}/status");

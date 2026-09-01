@@ -463,7 +463,6 @@ it('maps forward events to invoke meta', function (): void {
 it('exports fire-and-forget machine delegation with meta', function (): void {
     $command = new ExportXStateCommand();
     $method  = new ReflectionMethod($command, 'buildMachineNode');
-    $method->setAccessible(true);
 
     $definition = FireAndForgetParentMachine::definition();
     $xstate     = $method->invoke($command, $definition);
@@ -479,7 +478,6 @@ it('exports fire-and-forget machine delegation with meta', function (): void {
 it('exports fire-and-forget with target in meta', function (): void {
     $command = new ExportXStateCommand();
     $method  = new ReflectionMethod($command, 'buildMachineNode');
-    $method->setAccessible(true);
 
     $definition = FireAndForgetTargetParentMachine::definition();
     $xstate     = $method->invoke($command, $definition);

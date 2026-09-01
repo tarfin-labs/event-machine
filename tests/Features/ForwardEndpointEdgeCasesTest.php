@@ -231,7 +231,6 @@ test('available_events on state with only @always guarded returns empty array', 
 test('available_events on state with null currentStateDefinition returns empty array', function (): void {
     $state = State::forTesting(
         context: [],
-        currentStateDefinition: null,
     );
 
     expect($state->availableEvents())->toBe([]);

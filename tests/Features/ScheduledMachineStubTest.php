@@ -28,5 +28,5 @@ it('stub ExpiredApplicationsResolver returns configured ids', function (): void 
     $resolver = new ExpiredApplicationsResolver();
     $ids      = $resolver();
 
-    expect($ids->toArray())->toBe(['root-1', 'root-2', 'root-3']);
+    expect($ids->all())->toBe(['root-1', 'root-2', 'root-3']);
 });

@@ -19,7 +19,7 @@ it('can persist the machine state', function (): void {
     $eventIds = $machine->state->history
         ->pluck('id')
         ->map(fn ($key) => ['id' => $key])
-        ->toArray();
+        ->all();
 
     foreach ($eventIds as $eventId) {
         $this->assertDatabaseHas(MachineEvent::class, $eventId);
@@ -67,7 +67,7 @@ it('can auto persist after an event', function (): void {
     $eventIds = $machine->state->history
         ->pluck('id')
         ->map(fn ($key) => ['id' => $key])
-        ->toArray();
+        ->all();
 
     foreach ($eventIds as $eventId) {
         $this->assertDatabaseHas(MachineEvent::class, $eventId);
@@ -82,7 +82,7 @@ it('should not persist the machine state', function (): void {
     $eventIds = $machine->state->history
         ->pluck('id')
         ->map(fn ($key) => ['id' => $key])
-        ->toArray();
+        ->all();
 
     foreach ($eventIds as $eventId) {
         $this->assertDatabaseMissing(MachineEvent::class, $eventId);

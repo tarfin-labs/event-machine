@@ -41,7 +41,7 @@ class ComputedContextEndpointMachine extends Machine
                 ],
                 'actions' => [
                     'incrementAction' => function (ComputedTestContext $context): void {
-                        $context->count = $context->count + 1;
+                        $context->count += 1;
                     },
                 ],
             ],

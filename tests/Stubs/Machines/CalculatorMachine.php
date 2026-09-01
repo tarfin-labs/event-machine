@@ -33,16 +33,16 @@ class CalculatorMachine extends Machine
             behavior: [
                 'actions' => [
                     'additionAction' => function (ContextManager $c, EventDefinition $e): void {
-                        $c->total = $c->total + $e->payload['value'];
+                        $c->total += $e->payload['value'];
                     },
                     'subtractionAction' => function (ContextManager $ctx, EventDefinition $evt): void {
-                        $ctx->total = $ctx->total - $evt->payload['value'];
+                        $ctx->total -= $evt->payload['value'];
                     },
                     'multiplicationAction' => function (ContextManager $contextManager, EventDefinition $eventDefinition): void {
-                        $contextManager->total = $contextManager->total * $eventDefinition->payload['value'];
+                        $contextManager->total *= $eventDefinition->payload['value'];
                     },
                     'divisionAction' => function (ContextManager $manager, EventDefinition $event): void {
-                        $manager->total = $manager->total / $event->payload['value'];
+                        $manager->total /= $event->payload['value'];
                     },
                 ],
             ],

@@ -183,7 +183,7 @@ it('ChildJobJob runs job and dispatches completion with result', function (): vo
     $job->handle();
 
     Queue::assertPushed(ChildMachineCompletionJob::class, function (ChildMachineCompletionJob $completionJob): bool {
-        return $completionJob->success === true
+        return $completionJob->success
             && $completionJob->outputData === ['message_id' => 'msg_123'];
     });
 });
@@ -192,7 +192,7 @@ it('ChildJobJob dispatches failure on exception', function (): void {
     Queue::fake();
 
     $failingJobClass = new class() {
-        public function handle(): void
+        public function handle(): never
         {
             throw new RuntimeException('Email service unavailable');
         }
@@ -263,7 +263,7 @@ it('ChildJobJob resolves handle() dependencies via service container', function 
     $job->handle();
 
     Queue::assertPushed(ChildMachineCompletionJob::class, function (ChildMachineCompletionJob $completionJob): bool {
-        return $completionJob->success === true
+        return $completionJob->success
             && $completionJob->outputData === ['serviceData' => 'fake-result'];
     });
 });
@@ -341,7 +341,7 @@ it('ChildJobJob without ReturnsOutput returns empty output', function (): void {
     $job->handle();
 
     Queue::assertPushed(ChildMachineCompletionJob::class, function (ChildMachineCompletionJob $completionJob): bool {
-        return $completionJob->success === true
+        return $completionJob->success
             && $completionJob->outputData === [];
     });
 });

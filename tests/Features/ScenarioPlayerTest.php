@@ -218,7 +218,7 @@ test('null machine for non-@start event throws ScenarioConfigurationException', 
     $player   = new ScenarioPlayer($scenario);
 
     // Pass null machine for non-@start scenario
-    expect(fn () => $player->execute(machine: null))->toThrow(ScenarioConfigurationException::class);
+    expect(fn () => $player->execute())->toThrow(ScenarioConfigurationException::class);
 });
 
 test('MissingMachineContextException enriched with requiredContext hints', function (): void {
@@ -1030,7 +1030,6 @@ test('getOutcome exact route match — simple string outcome', function (): void
     // Outcomes are populated in classifyPlanValues which is called during execute().
     // Let's test by manually setting via reflection.
     $reflection = new ReflectionProperty(ScenarioPlayer::class, 'outcomes');
-    $reflection->setAccessible(true);
     $reflection->setValue(null, ['processing' => '@fail']);
 
     expect(ScenarioPlayer::getOutcome('processing'))->toBe('@fail');
@@ -1040,7 +1039,6 @@ test('getOutcome exact route match — simple string outcome', function (): void
 
 test('getOutcome suffix route match', function (): void {
     $reflection = new ReflectionProperty(ScenarioPlayer::class, 'outcomes');
-    $reflection->setAccessible(true);
     $reflection->setValue(null, ['processing' => '@done']);
 
     // Suffix match: 'scenario_test.processing' ends with '.processing'
@@ -1051,7 +1049,6 @@ test('getOutcome suffix route match', function (): void {
 
 test('getOutcome returns full array with output key for outcome-with-output format', function (): void {
     $reflection = new ReflectionProperty(ScenarioPlayer::class, 'outcomes');
-    $reflection->setAccessible(true);
     $reflection->setValue(null, [
         'processing' => ['outcome' => '@done', 'output' => ['amount' => 100]],
     ]);
@@ -1072,7 +1069,6 @@ test('@done outcome simulated — parent transitions via routeChildDoneEvent', f
     // This requires the full execute() pipeline with a persisted machine.
     // For unit test, verify getOutcome returns the correct value.
     $reflection = new ReflectionProperty(ScenarioPlayer::class, 'outcomes');
-    $reflection->setAccessible(true);
     $reflection->setValue(null, ['processing' => '@done']);
 
     expect(ScenarioPlayer::getOutcome('processing'))->toBe('@done');
@@ -1082,7 +1078,6 @@ test('@done outcome simulated — parent transitions via routeChildDoneEvent', f
 
 test('@fail outcome simulated — parent transitions via routeChildFailEvent', function (): void {
     $reflection = new ReflectionProperty(ScenarioPlayer::class, 'outcomes');
-    $reflection->setAccessible(true);
     $reflection->setValue(null, ['processing' => '@fail']);
 
     expect(ScenarioPlayer::getOutcome('processing'))->toBe('@fail');
@@ -1092,7 +1087,6 @@ test('@fail outcome simulated — parent transitions via routeChildFailEvent', f
 
 test('@timeout outcome routed via routeChildTimeoutEvent', function (): void {
     $reflection = new ReflectionProperty(ScenarioPlayer::class, 'outcomes');
-    $reflection->setAccessible(true);
     $reflection->setValue(null, ['processing' => '@timeout']);
 
     expect(ScenarioPlayer::getOutcome('processing'))->toBe('@timeout');
@@ -1102,7 +1096,6 @@ test('@timeout outcome routed via routeChildTimeoutEvent', function (): void {
 
 test('@done.{finalState} routes to per-final-state transition', function (): void {
     $reflection = new ReflectionProperty(ScenarioPlayer::class, 'outcomes');
-    $reflection->setAccessible(true);
     $reflection->setValue(null, ['delegating' => '@done.error']);
 
     expect(ScenarioPlayer::getOutcome('delegating'))->toBe('@done.error');
@@ -1185,7 +1178,6 @@ test('persistScenario writes scenario_class + scenario_params to machine_current
     // This requires RefreshDatabase + SQLite which is already configured via Pest.php
     // Create a persisted machine, then call persistScenario
     $method = new ReflectionMethod(ScenarioPlayer::class, 'persistScenario');
-    $method->setAccessible(true);
 
     // We need a root_event_id from a persisted machine
     // Create and persist a simple machine

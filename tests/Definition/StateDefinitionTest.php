@@ -576,9 +576,7 @@ test('a machine can have outputs on final states', function (string $eventType):
                 ],
                 'yellow' => [
                     'type'   => 'final',
-                    'output' => function (): Carbon {
-                        return now();
-                    },
+                    'output' => now(...),
                 ],
                 'green' => [
                     'type'   => 'final',

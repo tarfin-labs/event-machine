@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Request;
 use Tarfinlabs\EventMachine\Routing\MachineRouter;
 use Tarfinlabs\EventMachine\Exceptions\InvalidRouterConfigException;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Endpoint\TestStartEvent;
@@ -31,7 +32,7 @@ function refreshRoutes(): void
 // ─── Package Discover Safety ─────────────────────────────────────────
 
 test('register skips route registration during package:discover', function (): void {
-    $originalArgv = $_SERVER['argv'] ?? [];
+    $originalArgv = Request::server('argv') ?? [];
 
     try {
         $_SERVER['argv'] = ['artisan', 'package:discover'];
@@ -54,7 +55,7 @@ test('register skips route registration during package:discover', function (): v
 });
 
 test('register works normally for other artisan commands', function (): void {
-    $originalArgv = $_SERVER['argv'] ?? [];
+    $originalArgv = Request::server('argv') ?? [];
 
     try {
         $_SERVER['argv'] = ['artisan', 'route:list'];
@@ -155,7 +156,7 @@ test('modelFor events use handleModelBound with correct URI and binding', functi
         ->and($route->getActionMethod())->toBe('handleModelBound')
         ->and($route->uri())->toBe('api/model-bound/{order}/start');
 
-    $binder = app('router')->getBindingCallback('order');
+    $binder = resolve('router')->getBindingCallback('order');
 
     expect($binder)->not->toBeNull();
 });

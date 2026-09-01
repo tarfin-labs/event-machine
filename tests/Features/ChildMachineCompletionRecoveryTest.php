@@ -150,7 +150,7 @@ it('logs idempotent skip and does not dispatch when parent transitioned AND Mach
     Queue::assertNotPushed(ChildMachineCompletionJob::class);
 
     // Structured idempotent-skip log was emitted.
-    Log::shouldHaveReceived('info')->withArgs(function ($message, $context) use ($middleId): bool {
+    Log::shouldHaveReceived('info')->withArgs(function ($message, array $context) use ($middleId): bool {
         return str_contains($message, 'parent already transitioned')
             && ($context['parent_root_event_id'] ?? null) === $middleId
             && ($context['parent_state_id'] ?? null) === 'middle_child.delegating';

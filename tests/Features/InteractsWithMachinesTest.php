@@ -9,7 +9,6 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ScenarioTestMachi
 test('tearDown resets ScenarioPlayer overrides (boundClassKeys, inlineKeys, outcomes, isActive)', function (): void {
     // Simulate dirty state — register some overrides
     $reflection = new ReflectionProperty(ScenarioPlayer::class, 'outcomes');
-    $reflection->setAccessible(true);
     $reflection->setValue(null, ['some_state' => '@done']);
 
     // Cleanup (simulates what InteractsWithMachines::tearDown does)
@@ -29,8 +28,7 @@ test('tearDown resets ScenarioDiscovery cache', function (): void {
     // After reset, internal cache should be cleared
     // Verify by using reflection to check the static $cache property
     $reflection = new ReflectionProperty(ScenarioDiscovery::class, 'cache');
-    $reflection->setAccessible(true);
-    $cache = $reflection->getValue();
+    $cache      = $reflection->getValue();
 
     expect($cache)->toBeEmpty();
 });

@@ -34,7 +34,7 @@ test('it strips the _EVENT suffix when generating a URI', function (): void {
 // === fromConfig with string key (event type) ===
 
 test('it creates an endpoint from null config with auto-generated URI', function (): void {
-    $endpoint = EndpointDefinition::fromConfig('FARMER_SAVED', null);
+    $endpoint = EndpointDefinition::fromConfig('FARMER_SAVED');
 
     expect($endpoint->eventType)->toBe('FARMER_SAVED')
         ->and($endpoint->uri)->toBe('/farmer-saved')
@@ -108,7 +108,7 @@ test('it resolves event type from an EventBehavior class key', function (): void
 });
 
 test('it resolves event type from an EventBehavior class key with null config', function (): void {
-    $endpoint = EndpointDefinition::fromConfig(SimpleEvent::class, null);
+    $endpoint = EndpointDefinition::fromConfig(SimpleEvent::class);
 
     expect($endpoint->eventType)->toBe('SIMPLE_EVENT')
         ->and($endpoint->uri)->toBe('/simple');

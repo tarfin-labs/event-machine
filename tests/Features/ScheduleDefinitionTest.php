@@ -39,7 +39,7 @@ it('fromConfig resolves EventBehavior FQCN key to event type string', function (
 });
 
 it('hasResolver returns false for null', function (): void {
-    $def = new ScheduleDefinition(eventType: 'TEST', resolver: null);
+    $def = new ScheduleDefinition(eventType: 'TEST');
 
     expect($def->hasResolver())->toBeFalse();
 });

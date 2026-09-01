@@ -8,7 +8,7 @@ use Tarfinlabs\EventMachine\Exceptions\InvalidRouterConfigException;
 // === Value forms ===
 
 test('null value uses all defaults with uri from the key', function (): void {
-    $read = ReadDefinition::fromConfig('status', null);
+    $read = ReadDefinition::fromConfig('status');
 
     expect($read->name)->toBe('status')
         ->and($read->uri)->toBe('/status')

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Collection;
 use Tarfinlabs\EventMachine\Actor\State;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
@@ -130,10 +131,10 @@ test('injectInvokableBehaviorParameters handles union types correctly', function
 });
 
 test('constructor initializes eventQueue correctly', function (): void {
-    $behavior = new class(null) extends InvokableBehavior {
+    $behavior = new class() extends InvokableBehavior {
         public function __invoke(): void {}
 
-        public function getEventQueue()
+        public function getEventQueue(): ?Collection
         {
             return $this->eventQueue;
         }

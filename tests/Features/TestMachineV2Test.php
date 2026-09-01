@@ -437,8 +437,6 @@ it('V17: simulateChildTimeout transitions parent via @timeout', function (): voi
 
 it('V18: simulateChildDone result data accessible via output and result', function (): void {
     Queue::fake();
-
-    $capturedOutput = null;
     $capturedOutput = null;
 
     $testMachine = TestMachine::define(
@@ -1578,7 +1576,6 @@ it('V29: State::lastChildDoneRoute set by routeChildDoneEvent (direct routing te
     // Route a @done.approved event directly
     $doneEvent = ChildMachineDoneEvent::forChild([
         'output'        => ['decision' => 'yes'],
-        'output'        => ['decision' => 'yes'],
         'machine_id'    => '',
         'machine_class' => MultiOutcomeChildMachine::class,
         'final_state'   => 'approved',
@@ -1612,7 +1609,6 @@ it('V30: State::lastChildDoneRoute is null for catch-all @done', function (): vo
 
     // Route with an unknown finalState that doesn't match any @done.{state}
     $doneEvent = ChildMachineDoneEvent::forChild([
-        'output'        => [],
         'output'        => [],
         'machine_id'    => '',
         'machine_class' => MultiOutcomeChildMachine::class,
