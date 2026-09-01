@@ -25,7 +25,7 @@ class MachineScenarioCommand extends Command
         {--dry-run : Print generated file without writing}
         {--force : Overwrite existing scenario file}
         {--path=0 : Select path by index when multiple paths exist}
-        {--max-iterations=1000 : Maximum BFS iterations before the search is reported as truncated}';
+        {--max-iterations=1000 : Expansions allowed for the whole resolution, across every branch of the trigger, before the search is reported as truncated}';
     protected $description = 'Generate a MachineScenario class by analyzing the machine definition';
 
     public function handle(): int

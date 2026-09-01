@@ -23,7 +23,7 @@ class MachineScenarioValidateCommand extends Command
     protected $signature = 'machine:scenario-validate
         {machine? : Validate scenarios for a specific machine (FQCN or class name)}
         {--scenario= : Validate a single scenario by class name or slug}
-        {--max-iterations=1000 : Maximum BFS iterations before the path search is reported as truncated}';
+        {--max-iterations=1000 : Expansions allowed for the whole resolution, across every branch of the trigger, before the path search is reported as truncated}';
     protected $description = 'Validate all scenarios against their machine definitions';
 
     public function handle(): int
