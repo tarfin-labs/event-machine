@@ -16,6 +16,12 @@ function descentResolver(string $machine): ScenarioPathResolver
     return new ScenarioPathResolver(new MachineGraph($machine::definition()));
 }
 
+/**
+ * Each step as [state key, classification value, weight] — the three things a pricing
+ * assertion needs side by side.
+ *
+ * @return list<array{0: string, 1: string, 2: int}>
+ */
 function pathShape(ScenarioPath $path): array
 {
     return array_map(
