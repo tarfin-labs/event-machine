@@ -60,12 +60,14 @@ It used to be one per branch of the trigger event, so the effective ceiling was
 `maxIterations × branchCount`. Multiply a pinned value by the branch count. Operators who never
 pinned it lose the same headroom silently, since the default stays 1000.
 
-Truncation therefore becomes more likely, never less — both from the smaller effective ceiling and
-because the search now cuts in cost order rather than breadth order, deferring a target reachable
-only through an expensive state behind every cheaper frontier entry. `wasTruncated()` can report
-`true` where it reported `false` on an unchanged machine at an unchanged cap. "Truncated at the
-search limit" remains a different finding from "no path exists", and only the first is fixable by
-raising the number.
+Truncation therefore becomes more likely, never less, and the smaller ceiling is the whole of the
+reason: `wasTruncated()` can report `true` where it reported `false` on an unchanged machine at an
+unchanged cap. Cost ordering does something different and equally worth knowing — it changes *which*
+paths are found inside a cap already being hit, deferring a target reachable only through an
+expensive state behind every cheaper frontier entry, so a target a cap previously reached may now
+fall outside it. It cannot move the flag itself, because draining the frontier costs the same number
+of expansions whatever order they come out in. "Truncated at the search limit" remains a different
+finding from "no path exists", and only the first is fixable by raising the number.
 
 ### `machine:scenario` output changes, including for a single path
 
