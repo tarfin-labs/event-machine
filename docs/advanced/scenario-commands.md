@@ -33,7 +33,7 @@ The command:
 **Options:**
 - `--dry-run` — prints generated PHP to stdout without writing the file
 - `--force` — overwrites an existing scenario file (without it, the command fails if the file exists)
-- `--path=N` — when multiple paths exist from source to target, selects path by index (default: 0). The command lists all paths with signatures and stats when multiple are found. **`N` re-indexed in this release**: paths are now listed cheapest first rather than in the order the search happened to find them, so a pinned `--path=3` selects a different route than it did before. Capture the listing before upgrading and re-match by signature.
+- `--path=N` — when multiple paths exist from source to target, selects path by index (default: 0). The command lists every resolved path with its signature and stats, including when only one is found. **`N` re-indexed in this release**: paths are now listed cheapest first rather than in the order the search happened to find them, so a pinned `--path=3` selects a different route than it did before. Capture the listing before upgrading and re-match by signature.
 - `--max-iterations=N` — caps the path search (default: 1000). **This is now one budget for the whole resolution rather than one per branch of the trigger event**, so a multi-branch trigger has less headroom than before: multiply a pinned value by the branch count. If the search stops with work still pending, the command always says so: **"truncated at the search limit" is a different finding from "no path exists"**, and only the first is fixable by raising this number. With no path found it fails; with a path found it warns and continues, because the route list — and therefore `--path=N` — may be missing routes. A genuinely unconnected source and target fail no matter how high it goes.
 
 ### Multiple Paths
@@ -75,6 +75,18 @@ the generated file.
 Routes of equal weight are listed shorter first. Routes equal on **both** weight and length have **no
 promised order** — it is stable for a given machine but nothing guarantees which comes first, so
 `--path=N` is not a durable selector within such a group. Pick by reading the signature, not the index.
+
+A resolution with one route prints the same listing, minus the selection hint:
+
+```
+Found 1 path from pending to allocation:
+
+  [0] [SUBMIT]→eligibility_check→[APPROVE]→allocation
+      0 overrides, 0 delegation outcomes, 1 @continue, weight 1
+```
+
+The weight is printed here for the same reason it is printed for two: it is the only number the
+command reports about the route it chose, and comparing one run against the next needs it.
 
 ### Deep Target (Cross-Delegation)
 
