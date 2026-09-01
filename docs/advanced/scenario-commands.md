@@ -25,7 +25,7 @@ php artisan machine:scenario AtAllocation OrderMachine \
 ```
 
 The command:
-1. Resolves the path from source to target via BFS
+1. Resolves the path from source to target, cheapest route first
 2. Classifies each intermediate state (transient, delegation, interactive, parallel)
 3. Generates appropriate `plan()` entries with TODO comments
 4. Writes the file to `Scenarios/` next to the machine class
@@ -33,24 +33,38 @@ The command:
 **Options:**
 - `--dry-run` — prints generated PHP to stdout without writing the file
 - `--force` — overwrites an existing scenario file (without it, the command fails if the file exists)
-- `--path=N` — when multiple paths exist from source to target, selects path by index (default: 0). The command lists all paths with signatures and stats when multiple are found.
-- `--max-iterations=N` — caps the BFS that resolves the route (default: 1000). If the search stops with work still pending, the command always says so: **"truncated at the search limit" is a different finding from "no path exists"**, and only the first is fixable by raising this number. With no path found it fails; with a path found it warns and continues, because the route list — and therefore `--path=N` — may be missing routes. A genuinely unconnected source and target fail no matter how high it goes.
+- `--path=N` — when multiple paths exist from source to target, selects path by index (default: 0). The command lists all paths with signatures and stats when multiple are found. **`N` re-indexed in this release**: paths are now listed cheapest first rather than in the order the search happened to find them, so a pinned `--path=3` selects a different route than it did before. Capture the listing before upgrading and re-match by signature.
+- `--max-iterations=N` — caps the path search (default: 1000). **This is now one budget for the whole resolution rather than one per branch of the trigger event**, so a multi-branch trigger has less headroom than before: multiply a pinned value by the branch count. If the search stops with work still pending, the command always says so: **"truncated at the search limit" is a different finding from "no path exists"**, and only the first is fixable by raising this number. With no path found it fails; with a path found it warns and continues, because the route list — and therefore `--path=N` — may be missing routes. A genuinely unconnected source and target fail no matter how high it goes.
 
 ### Multiple Paths
 
-When BFS finds multiple paths, the command presents them:
+When several routes reach the target, the command lists them **cheapest first**:
 
 ```
 Found 2 paths from pending to allocation:
 
-  [0] pending → eligibility_check → payment_verification → under_review → allocation
-      3 overrides, 2 delegation outcomes, 1 @continue
+  [0] pending → eligibility_check → manual_review → allocation
+      2 overrides, 0 delegation outcomes, 0 @continue, weight 3
 
-  [1] pending → eligibility_check → manual_review → allocation
-      2 overrides, 0 delegation outcomes, 0 @continue
+  [1] pending → eligibility_check → payment_verification → under_review → allocation
+      3 overrides, 2 delegation outcomes, 1 @continue, weight 7
 
 Use --path=N to select. Using path [0].
 ```
+
+The **weight** is what the list is ordered by. It is the sum of a per-classification cost over the
+states the route enters — 0 for transient, compound and final states, 1 for interactive, 3 for
+delegation, 5 for parallel — and it measures *what the scenario has to supply that the runtime
+cannot*: an event to send, a child outcome to stand in for, guards to pin across concurrent regions.
+
+It is **not** a count of the lines the scaffold will contain. A transient state emits a guard block
+and still weighs 0, because the machine leaves it on its own; a delegation state emits one pre-filled
+line and weighs 3, because standing in for a child is the expensive part and none of it shows up in
+the generated file.
+
+Routes of equal weight are listed shorter first. Routes equal on **both** weight and length have **no
+promised order** — it is stable for a given machine but nothing guarantees which comes first, so
+`--path=N` is not a durable selector within such a group. Pick by reading the signature, not the index.
 
 ### Deep Target (Cross-Delegation)
 
@@ -150,7 +164,7 @@ php artisan machine:scenario-validate
 
 **Options:**
 - `--scenario=` — validate a single scenario by slug, class basename, or FQCN.
-- `--max-iterations=N` — the search budget handed to the resolver for every scenario's path check (default: 1000). A scenario whose search hits the cap is reported as **truncated at the search limit**, which is a different finding from "no path": raising this number can resolve the first and never the second. Validated before anything is reported, so a typo fails the command rather than silently capping the search at zero.
+- `--max-iterations=N` — the search budget handed to the resolver for every scenario's path check (default: 1000), counted in expansions across the whole resolution rather than per branch of the trigger. A scenario whose search hits the cap is reported as **truncated at the search limit**, which is a different finding from "no path": raising this number can resolve the first and never the second. Validated before anything is reported, so a typo fails the command rather than silently capping the search at zero.
 
 When `{machine}` is omitted, the command auto-discovers all Machine subclasses that have a `Scenarios/` directory (via Composer classmap, falls back to `app/Machines` file scan). Ensure autoload is up to date with `composer dump-autoload` if newly added machines aren't found.
 
