@@ -43,14 +43,24 @@ When several routes reach the target, the command lists them **cheapest first**:
 ```
 Found 2 paths from pending to allocation:
 
-  [0] pending → eligibility_check → manual_review → allocation
-      2 overrides, 0 delegation outcomes, 0 @continue, weight 3
+  [0] [SUBMIT]→eligibility_check→[MANUAL]→manual_review→[APPROVE]→allocation
+      0 overrides, 0 delegation outcomes, 2 @continue, weight 2
 
-  [1] pending → eligibility_check → payment_verification → under_review → allocation
-      3 overrides, 2 delegation outcomes, 1 @continue, weight 7
+  [1] [SUBMIT]→eligibility_check→[VERIFY]→payment_verification→[@done]→allocation
+      0 overrides, 1 delegation outcomes, 1 @continue, weight 6
 
 Use --path=N to select. Using path [0].
 ```
+
+The signature names every state the route **enters** and the event that enters it. The source state
+is not in it — a path begins at the trigger transition's target — so `[SUBMIT]→eligibility_check` is
+the first hop out of `pending`, not `pending` itself.
+
+The counts and the weight are two views of the same steps, so they agree by construction: `overrides`
+counts transient states, `delegation outcomes` counts delegation *and* parallel states, `@continue`
+counts interactive ones, and compound and final states appear in neither. Route `[0]` is two
+interactive states and a final one — 1 + 1 + 0. Route `[1]` trades one of them for a parallel state:
+1 + 5 + 0.
 
 The **weight** is what the list is ordered by. It is the sum of a per-classification cost over the
 states the route enters — 0 for transient, compound and final states, 1 for interactive, 3 for
