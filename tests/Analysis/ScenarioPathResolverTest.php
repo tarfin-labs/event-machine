@@ -199,7 +199,7 @@ test('no path found throws NoScenarioPathFoundException', function (): void {
         ->toThrow(NoScenarioPathFoundException::class);
 });
 
-test('multiple paths returned by resolveAll (in BFS discovery order)', function (): void {
+test('multiple paths returned by resolveAll', function (): void {
     $resolver = scenarioResolver();
     // From reviewing, DELEGATE leads to delegating, which has @done and @done.error and @fail
     // So there are multiple paths from reviewing → DELEGATE → {delegation_complete, delegation_error, delegation_failed}
