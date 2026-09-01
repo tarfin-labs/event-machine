@@ -1,0 +1,493 @@
+# Actions
+
+Actions execute side effects during state transitions. They can modify context, call external services, raise events, and perform any operation needed during state changes.
+
+## When Actions Run
+
+Actions execute at different points in the state lifecycle:
+
+```mermaid
+sequenceDiagram
+    participant Source as Source State
+    participant Transition
+    participant Target as Target State
+
+    Source->>Source: Exit actions
+    Source->>Transition: Transition actions
+    Transition->>Target: Enter target
+    Target->>Target: Entry actions
+```
+
+1. **Exit actions**: When leaving a state
+2. **Transition actions**: During the transition
+3. **Entry actions**: When entering a state
+
+## Defining Actions
+
+### Inline Functions
+
+```php
+use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+
+MachineDefinition::define(
+    config: [
+        'states' => [
+            'idle' => [
+                'on' => [
+                    'INCREMENT' => [
+                        'actions' => 'incrementCountAction',
+                    ],
+                ],
+            ],
+        ],
+    ],
+    behavior: [
+        'actions' => [
+            'incrementCountAction' => fn(ContextManager $context) => $context->count++,
+        ],
+    ],
+);
+```
+
+### Class-Based Actions
+
+```php ignore
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
+
+class IncrementAction extends ActionBehavior
+{
+    public function __invoke(ContextManager $context): void
+    {
+        $context->count++;
+    }
+}
+
+// Registration
+'actions' => [
+    'incrementCountAction' => IncrementAction::class,
+],
+```
+
+### Direct Class Reference
+
+You can use a class FQCN directly in config without registering it in the `behavior` map. Both inline keys and FQCN references work interchangeably — see [Behavior Resolution](/behaviors/introduction#behavior-resolution) for details.
+
+```php ignore
+'on' => [
+    'INCREMENT' => [
+        'actions' => IncrementAction::class,
+    ],
+],
+```
+
+## Multiple Actions
+
+### Array of Actions
+
+```php ignore
+'on' => [
+    'SUBMIT' => [
+        'target' => 'submitted',
+        'actions' => ['validateInputAction', 'saveDataAction', 'sendNotificationAction'],
+    ],
+],
+```
+
+### Entry/Exit Actions
+
+```php ignore
+'states' => [
+    'loading' => [
+        'entry' => ['startSpinnerAction', 'logEntryAction'],
+        'exit' => ['stopSpinnerAction', 'logExitAction'],
+        'on' => [
+            'LOADED' => 'success',
+        ],
+    ],
+],
+```
+
+## Action Parameters
+
+Actions receive injected parameters:
+
+```php
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\Behavior\EventBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\Actor\State; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+
+class ProcessAction extends ActionBehavior
+{
+    public function __invoke(
+        ContextManager $context,
+        EventBehavior $event,
+        State $state,
+    ): void {
+        // Access context
+        $orderId = $context->orderId;
+
+        // Access event payload
+        $amount = $event->payload['amount'];
+
+        // Access current state
+        $currentState = $state->currentStateDefinition->id;
+    }
+}
+```
+
+::: tip Available Parameters
+See [Parameter Injection](/behaviors/introduction#parameter-injection) for the full list of injectable parameters (`ContextManager`, `EventBehavior`, `State`, `EventCollection`) and [Named Parameters](/behaviors/introduction#named-parameters) for config-defined params.
+:::
+
+## Action Parameters
+
+Pass named parameters using tuple syntax:
+
+```php ignore
+// Config — parameterized action is an inner array (tuple)
+'actions' => [[AddValueAction::class, 'value' => 100]],
+
+// Action — receives typed named parameter
+class AddValueAction extends ActionBehavior
+{
+    public function __invoke(ContextManager $context, int $value): void
+    {
+        $context->total += $value;
+    }
+}
+```
+
+## Dependency Injection
+
+Class actions support constructor injection:
+
+```php no_run
+class ProcessOrderAction extends ActionBehavior
+{
+    public function __construct(
+        private readonly OrderService $orderService,
+        private readonly PaymentGateway $paymentGateway,
+        private readonly NotificationService $notifications,
+    ) {}
+
+    public function __invoke(ContextManager $context): void
+    {
+        $order = $this->orderService->create($context->items);
+        $this->paymentGateway->charge($order->total);
+        $this->notifications->orderConfirmed($order);
+
+        $context->orderId = $order->id;
+    }
+}
+```
+
+## Raising Events
+
+Actions can queue events for processing:
+
+```php
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+
+class ProcessAction extends ActionBehavior
+{
+    public function __invoke(ContextManager $context): void
+    {
+        $context->processed = true;
+
+        // Queue event for after current transition completes
+        $this->raise(['type' => 'PROCESSING_COMPLETE']);
+
+        // With payload
+        $this->raise([
+            'type' => 'NOTIFICATION',
+            'payload' => ['message' => 'Order processed'],
+        ]);
+    }
+}
+```
+
+Raised events are processed after the current transition and all entry actions complete.
+
+## Required Context
+
+Declare required context keys:
+
+```php no_run
+class ChargePaymentAction extends ActionBehavior
+{
+    public static array $requiredContext = [
+        'userId' => 'string',
+        'amount' => 'numeric',
+        'paymentMethod' => 'string',
+    ];
+
+    public function __invoke(ContextManager $context): void
+    {
+        // Context is guaranteed to have these keys
+        $this->paymentGateway->charge(
+            $context->userId,
+            $context->amount,
+            $context->paymentMethod,
+        );
+    }
+}
+```
+
+## Logging
+
+Enable execution logging:
+
+```php
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+
+class ImportantAction extends ActionBehavior
+{
+    public bool $shouldLog = true;
+
+    public function __invoke(ContextManager $context): void
+    {
+        // Execution will be logged
+    }
+}
+```
+
+## Practical Examples
+
+### Updating Context
+
+```php
+use Tarfinlabs\EventMachine\Behavior\ActionBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\Behavior\EventBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+
+class AddItemAction extends ActionBehavior
+{
+    public function __invoke(
+        ContextManager $context,
+        EventBehavior $event,
+    ): void {
+        $item = $event->payload['item'];
+
+        $context->items[] = $item;
+        $context->itemCount = count($context->items);
+        $context->total += $item['price'];
+    }
+}
+```
+
+### External Service Call
+
+```php no_run
+class SendEmailAction extends ActionBehavior
+{
+    public function __construct(
+        private readonly Mailer $mailer,
+    ) {}
+
+    public function __invoke(ContextManager $context): void
+    {
+        $this->mailer->send(
+            to: $context->userEmail,
+            template: 'order-confirmation',
+            data: [
+                'orderId' => $context->orderId,
+                'items' => $context->items,
+                'total' => $context->total,
+            ],
+        );
+    }
+}
+```
+
+### Database Operation
+
+```php no_run
+class CreateOrderAction extends ActionBehavior
+{
+    public function __invoke(ContextManager $context): void
+    {
+        $order = Order::create([
+            'user_id' => $context->userId,
+            'items' => $context->items,
+            'total' => $context->total,
+            'status' => 'pending',
+        ]);
+
+        $context->orderId = $order->id;
+    }
+}
+```
+
+### Conditional Logic
+
+```php no_run
+class ProcessPaymentAction extends ActionBehavior
+{
+    public function __construct(
+        private readonly PaymentGateway $gateway,
+    ) {}
+
+    public function __invoke(ContextManager $context): void
+    {
+        $result = $this->gateway->charge(
+            $context->paymentMethod,
+            $context->total,
+        );
+
+        if ($result->successful) {
+            $context->paymentId = $result->id;
+            $this->raise(['type' => 'PAYMENT_SUCCESS']);
+        } else {
+            $context->paymentError = $result->message;
+            $this->raise(['type' => 'PAYMENT_FAILED']);
+        }
+    }
+}
+```
+
+### Chained Actions
+
+```php ignore
+'on' => [
+    'CHECKOUT' => [
+        'target' => 'processing',
+        'actions' => [
+            ValidateCartAction::class,
+            CalculateTotalsAction::class,
+            ReserveInventoryAction::class,
+            CreateOrderAction::class,
+            SendConfirmationAction::class,
+        ],
+    ],
+],
+```
+
+## Testing Actions
+
+### Isolated (Unit)
+
+<!-- doctest-attr: ignore -->
+```php
+$state = State::forTesting(['count' => 0]);
+IncrementAction::runWithState($state);
+expect($state->context->get('count'))->toBe(1);
+```
+
+### Faked (Machine-Level)
+
+<!-- doctest-attr: ignore -->
+```php
+IncrementAction::shouldRun()->once();
+
+CounterMachine::test(['count' => 0])
+    ->send('INCREMENT')
+    ->assertBehaviorRan(IncrementAction::class);
+
+// Fake with custom side-effect
+ProcessOrderAction::shouldRun()
+    ->andReturnUsing(fn($ctx) => $ctx->set('orderId', 'fake-123'));
+
+// Fake inline action via TestMachine
+CounterMachine::test(['count' => 0])
+    ->faking(['incrementAction'])
+    ->send('INCREMENT')
+    ->assertBehaviorRan('incrementAction')
+    ->assertContext('count', 0);  // original skipped, count unchanged
+```
+
+### With Constructor DI
+
+<!-- doctest-attr: ignore -->
+```php
+it('sends notification via injected service', function () {
+    $this->mock(NotificationService::class)
+        ->shouldReceive('send')->once();
+
+    $state = State::forTesting(['userId' => 'user-1']);
+    SendNotificationAction::runWithState($state);
+});
+```
+
+### Raised Events
+
+<!-- doctest-attr: ignore -->
+```php
+// Test the full raised event chain via machine
+OrderMachine::test()
+    ->send('VALIDATE')
+    ->assertHistoryContains('VALIDATION_PASSED')
+    ->assertState('validated');
+```
+
+::: tip Full Testing Guide
+See [Isolated Testing](/testing/isolated-testing), [Fakeable Behaviors](/testing/fakeable-behaviors),
+and [Testing Recipes](/testing/recipes) for raised event patterns.
+:::
+
+## Best Practices
+
+### 1. Keep Actions Focused
+
+One action, one responsibility:
+
+```php ignore
+// Good
+class IncrementCountAction extends ActionBehavior { ... }
+class SendNotificationAction extends ActionBehavior { ... }
+
+// Avoid
+class DoEverythingAction extends ActionBehavior { ... }
+```
+
+### 2. Use Dependency Injection
+
+```php no_run
+class ProcessOrderAction extends ActionBehavior
+{
+    public function __construct(
+        private readonly OrderService $orders,
+    ) {}
+}
+```
+
+### 3. Handle Errors Gracefully
+
+```php no_run
+class ExternalApiAction extends ActionBehavior
+{
+    public function __invoke(ContextManager $context): void
+    {
+        try {
+            $result = $this->api->call($context->data);
+            $context->apiData = $result;
+        } catch (ApiException $e) {
+            $context->apiError = $e->getMessage();
+            $this->raise(['type' => 'API_ERROR']);
+        }
+    }
+}
+```
+
+### 4. Use Raised Events for Flow Control
+
+```php no_run
+class ValidateAction extends ActionBehavior
+{
+    public function __invoke(ContextManager $context): void
+    {
+        if ($this->isValid($context)) {
+            $this->raise(['type' => 'VALIDATION_PASSED']);
+        } else {
+            $this->raise(['type' => 'VALIDATION_FAILED']);
+        }
+    }
+}
+```
+
+::: tip Detailed Guide
+For comprehensive design guidelines with Do/Don't examples, see [Action Design](/best-practices/action-design).
+:::

@@ -1,0 +1,569 @@
+# Guards
+
+Guards are conditions that control whether a transition can occur. They evaluate to `true` (allow) or `false` (deny) based on the current context and event.
+
+## Basic Guards
+
+### Inline Guard
+
+```php
+use Tarfinlabs\EventMachine\Definition\MachineDefinition; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+
+MachineDefinition::define(
+    config: [
+        'states' => [
+            'idle' => [
+                'on' => [
+                    'SUBMIT' => [
+                        'target' => 'submitted',
+                        'guards' => 'hasItemsGuard',
+                    ],
+                ],
+            ],
+            'submitted' => [], // [!code hide]
+        ],
+    ],
+    behavior: [
+        'guards' => [
+            'hasItemsGuard' => fn(ContextManager $context) => count($context->items) > 0,
+        ],
+    ],
+);
+```
+
+### Class-Based Guard
+
+```php ignore
+use Tarfinlabs\EventMachine\Behavior\GuardBehavior;
+
+class HasItemsGuard extends GuardBehavior
+{
+    public function __invoke(ContextManager $context): bool
+    {
+        return count($context->items) > 0;
+    }
+}
+
+// Registration
+'guards' => [
+    'hasItemsGuard' => HasItemsGuard::class,
+],
+```
+
+Both inline keys and FQCN references work interchangeably — see [Behavior Resolution](/behaviors/introduction#behavior-resolution) for details.
+
+## Multiple Guards (AND Logic)
+
+All guards must pass for the transition to occur. Guards evaluate in order and **short-circuit** on the first failure:
+
+```php ignore
+'on' => [
+    'SUBMIT' => [
+        'target' => 'submitted',
+        'guards' => ['hasItemsGuard', 'hasValidPaymentGuard', 'hasShippingAddressGuard'],
+    ],
+],
+```
+
+If `hasItems` returns `false`, `hasValidPayment` and `hasShippingAddress` never execute.
+
+::: tip Performance
+Place fastest or most likely to fail guards first to minimize unnecessary evaluations.
+:::
+
+```mermaid
+flowchart TD
+    A[Event: SUBMIT] --> B{hasItems?}
+    B -->|No| X[No Transition]
+    B -->|Yes| C{hasValidPayment?}
+    C -->|No| X
+    C -->|Yes| D{hasShippingAddress?}
+    D -->|No| X
+    D -->|Yes| E[Transition to submitted]
+```
+
+## Multi-Path Transitions (OR Logic)
+
+Use multiple transition branches:
+
+```php ignore
+'on' => [
+    'CHECK' => [
+        ['target' => 'approved', 'guards' => 'isAutoApprovableGuard'],
+        ['target' => 'review', 'guards' => 'needsReviewGuard'],
+        ['target' => 'rejected', 'guards' => 'isBlacklistedGuard'],
+        ['target' => 'manual'],  // Fallback
+    ],
+],
+```
+
+The first matching branch is taken:
+
+```mermaid
+stateDiagram-v2
+    pending --> approved : CHECK [isAutoApprovable]
+    pending --> review : CHECK [needsReview]
+    pending --> rejected : CHECK [isBlacklisted]
+    pending --> manual : CHECK (fallback)
+```
+
+## Guard Parameters
+
+Guards receive injected parameters:
+
+```php
+use Tarfinlabs\EventMachine\Behavior\GuardBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\Behavior\EventBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\Actor\State; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+
+class AmountGuard extends GuardBehavior
+{
+    public function __invoke(
+        ContextManager $context,
+        EventBehavior $event,
+        State $state,
+    ): bool {
+        // Check context
+        $hasBalance = $context->balance >= $event->payload['amount'];
+
+        // Check event
+        $isValidAmount = $event->payload['amount'] > 0;
+
+        return $hasBalance && $isValidAmount;
+    }
+}
+```
+
+::: tip Available Parameters
+See [Parameter Injection](/behaviors/introduction#parameter-injection) for the full list of injectable parameters (`ContextManager`, `EventBehavior`, `State`, `EventCollection`) and [Named Parameters](/behaviors/introduction#named-parameters) for config-defined params.
+:::
+
+## Guard Parameters
+
+Pass named parameters to guards using tuple syntax:
+
+```php ignore
+// Config — parameterized guard is an inner array (tuple)
+'guards' => [[MinimumAmountGuard::class, 'minimum' => 100]],
+
+// Guard — receives typed named parameter
+class MinimumAmountGuard extends GuardBehavior
+{
+    public function __invoke(
+        ContextManager $context,
+        int $minimum,
+    ): bool {
+        return $context->amount >= $minimum;
+    }
+}
+```
+
+## Dependency Injection
+
+```php no_run
+class HasPermissionGuard extends GuardBehavior
+{
+    public function __construct(
+        private readonly AuthorizationService $auth,
+    ) {}
+
+    public function __invoke(ContextManager $context): bool
+    {
+        return $this->auth->can($context->userId, 'submit_order');
+    }
+}
+```
+
+## Required Context
+
+Declare required context:
+
+```php
+use Tarfinlabs\EventMachine\Behavior\GuardBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+
+class HasBalanceGuard extends GuardBehavior
+{
+    public static array $requiredContext = [
+        'userId' => 'string',
+        'balance' => 'numeric',
+    ];
+
+    public function __invoke(ContextManager $context): bool
+    {
+        return $context->balance > 0;
+    }
+}
+```
+
+## Practical Examples
+
+### Simple Condition
+
+```php
+use Tarfinlabs\EventMachine\Behavior\GuardBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+
+class IsEvenGuard extends GuardBehavior
+{
+    public function __invoke(ContextManager $context): bool
+    {
+        return $context->count % 2 === 0;
+    }
+}
+```
+
+### Complex Validation
+
+```php
+use Tarfinlabs\EventMachine\Behavior\GuardBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+
+class CanCheckoutGuard extends GuardBehavior
+{
+    public function __invoke(ContextManager $context): bool
+    {
+        // Must have items
+        if (empty($context->items)) {
+            return false;
+        }
+
+        // Must have valid payment
+        if (!$context->has('paymentMethod')) {
+            return false;
+        }
+
+        // Must have shipping address
+        if (!$context->has('shippingAddress')) {
+            return false;
+        }
+
+        // Total must be positive
+        if ($context->total <= 0) {
+            return false;
+        }
+
+        return true;
+    }
+}
+```
+
+### External Service Check
+
+```php no_run
+class InventoryAvailableGuard extends GuardBehavior
+{
+    public function __construct(
+        private readonly InventoryService $inventory,
+    ) {}
+
+    public function __invoke(ContextManager $context): bool
+    {
+        foreach ($context->items as $item) {
+            if (!$this->inventory->isAvailable($item['id'], $item['quantity'])) {
+                return false;
+            }
+        }
+        return true;
+    }
+}
+```
+
+### User Permission Check
+
+```php ignore
+class HasRoleGuard extends GuardBehavior
+{
+    public function __invoke(
+        ContextManager $context,
+        string $requiredRole = 'user',
+    ): bool {
+        return $context->user->hasRole($requiredRole);
+    }
+}
+
+// Usage
+'guards' => [[HasRoleGuard::class, 'requiredRole' => 'admin']],
+```
+
+### Time-Based Guard
+
+```php no_run
+class WithinBusinessHoursGuard extends GuardBehavior
+{
+    public function __invoke(): bool
+    {
+        $hour = now()->hour;
+        return $hour >= 9 && $hour < 17;
+    }
+}
+```
+
+### Event Payload Validation
+
+```php
+use Tarfinlabs\EventMachine\Behavior\GuardBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\Behavior\EventBehavior; // [!code hide]
+
+class ValidPayloadGuard extends GuardBehavior
+{
+    public function __invoke(EventBehavior $event): bool
+    {
+        $payload = $event->payload;
+
+        return isset($payload['amount'])
+            && $payload['amount'] > 0
+            && $payload['amount'] <= 10000;
+    }
+}
+```
+
+## Guard Purity Guarantee
+
+EventMachine enforces guard purity at runtime. Before evaluating guards on each transition branch, the engine **snapshots the context data**. If any guard in the branch fails, the context is **restored to the snapshot**, ensuring that side-effects from a failing guard do not leak into subsequent branch evaluations or into machine state.
+
+This is a runtime safety net, not just a convention. Even if a guard accidentally mutates context, the mutation is rolled back when the guard returns `false`.
+
+### How It Works
+
+1. Engine snapshots `context.data` before the first guard in a branch
+2. Guards evaluate in order (short-circuit on first failure)
+3. **If all pass:** snapshot is discarded, context changes are kept
+4. **If any fails:** context is restored to the snapshot before trying the next branch
+
+### Comparison With Other Implementations
+
+| Feature | EventMachine | XState | SCXML |
+|---------|-------------|--------|-------|
+| Guard purity | Enforced at runtime (snapshot/restore) | Convention only | Convention only |
+| Context rollback on guard failure | Yes, automatic | No | No |
+| Side-effect leakage between branches | Prevented | Possible | Possible |
+| Calculators before guards | Yes (first-class concept) | No equivalent | No equivalent |
+
+::: tip Why This Matters
+In multi-branch transitions, guards from branch 1 that fail could pollute context for branch 2's evaluation. EventMachine prevents this entirely. You get deterministic branching regardless of guard implementation quality.
+:::
+
+## Guard Evaluation Order
+
+Evaluation follows a **first-match-wins** strategy across branches, with **calculators before guards** within each branch:
+
+1. **Calculators** run first on the branch -- they update context values that guards will read
+2. **Guards** evaluate in array order -- all must pass (AND logic) with short-circuit on first failure
+3. If all guards pass, the branch is selected (**first match wins**)
+4. If any guard fails, context is restored and the next branch is tried
+5. If no branch passes, no transition fires
+
+```mermaid
+sequenceDiagram
+    participant Calc as Calculators
+    participant Guard as Guards
+    participant Action as Actions
+
+    Calc->>Calc: Calculate total
+    Calc->>Guard: Updated context
+    Guard->>Guard: Check hasMinimumTotal
+    Guard->>Guard: Check hasValidPayment
+    alt All guards pass
+        Guard->>Action: Proceed (first match wins)
+    else Any guard fails
+        Guard-->>Guard: Restore context snapshot
+        Note over Guard: Try next branch...
+    end
+```
+
+## Logging Guards
+
+Enable logging for debugging:
+
+```php
+use Tarfinlabs\EventMachine\Behavior\GuardBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+
+class DebugGuard extends GuardBehavior
+{
+    public bool $shouldLog = true;
+
+    public function __invoke(ContextManager $context): bool
+    {
+        // Guard evaluation will be logged
+        return $context->isValid;
+    }
+}
+```
+
+## Testing Guards
+
+### Isolated (Unit)
+
+<!-- doctest-attr: ignore -->
+```php
+// Pure guard test — no machine needed
+$state = State::forTesting(['count' => 15]);
+expect(IsAboveTenGuard::runWithState($state))->toBeTrue();
+
+$state = State::forTesting(['count' => 5]);
+expect(IsAboveTenGuard::runWithState($state))->toBeFalse();
+```
+
+### Faked (Machine-Level)
+
+<!-- doctest-attr: ignore -->
+```php
+// Force guard to pass or fail during machine execution
+IsAboveTenGuard::shouldReturn(false);
+
+CounterMachine::test(['count' => 100])
+    ->assertGuarded('CHECK');  // guard blocked despite count > 10
+
+IsAboveTenGuard::shouldReturn(true);
+
+CounterMachine::test(['count' => 0])
+    ->assertTransition('CHECK', 'passed');  // guard passed despite count = 0
+```
+
+### Inline Guard Faking
+
+<!-- doctest-attr: ignore -->
+```php
+// Force inline guard to block via key-value syntax
+OrderMachine::test()
+    ->faking(['hasItemsGuard' => false])
+    ->assertGuarded('SUBMIT');
+
+// Force inline guard to pass
+OrderMachine::test()
+    ->faking(['hasItemsGuard' => true])
+    ->send('SUBMIT')
+    ->assertState('submitted');
+
+// Verify which guard blocked
+OrderMachine::test()
+    ->faking(['hasItemsGuard' => false])
+    ->assertGuardedBy('SUBMIT', 'hasItemsGuard');
+```
+
+### With Constructor DI
+
+<!-- doctest-attr: ignore -->
+```php
+it('checks permission via auth service', function () {
+    $this->mock(AuthorizationService::class)
+        ->shouldReceive('can')->with('user-1', 'submit_order')
+        ->andReturn(true);
+
+    $state = State::forTesting(['userId' => 'user-1']);
+    expect(HasPermissionGuard::runWithState($state))->toBeTrue();
+});
+```
+
+### Definition-Level Testing
+
+```php no_run
+it('blocks transition when guard fails', function () {
+    $machine = MachineDefinition::define(
+        config: [
+            'initial' => 'idle',
+            'context' => ['count' => 5],
+            'states' => [
+                'idle' => [
+                    'on' => [
+                        'CHECK' => [
+                            'target' => 'passed',
+                            'guards' => 'isAboveTenGuard',
+                        ],
+                    ],
+                ],
+                'passed' => [],
+            ],
+        ],
+        behavior: [
+            'guards' => [
+                'isAboveTenGuard' => fn($ctx) => $ctx->count > 10,
+            ],
+        ],
+    );
+
+    // Guard fails - no transition
+    $state = $machine->transition(['type' => 'CHECK']);
+    expect($state->matches('idle'))->toBeTrue();
+
+    // Update context and try again
+    $state->context->count = 15;
+    $newState = $machine->transition(['type' => 'CHECK'], $state);
+    expect($newState->matches('passed'))->toBeTrue();
+});
+```
+
+::: tip Full Testing Guide
+See [Isolated Testing](/testing/isolated-testing) for `runWithState()` details,
+[Fakeable Behaviors](/testing/fakeable-behaviors) for the faking API,
+and [Transitions & Paths](/testing/transitions-and-paths) for guard testing in machines.
+:::
+
+## Best Practices
+
+### 1. Keep Guards Pure
+
+Guards should only read, never modify:
+
+```php ignore
+// Good - only reads context
+'guards' => [
+    'hasItemsGuard' => fn($ctx) => count($ctx->items) > 0,
+],
+
+// Bad - modifies context
+'guards' => [
+    'hasItemsGuard' => fn($ctx) => ($ctx->itemCount = count($ctx->items)) > 0,
+],
+```
+
+### 2. Use Descriptive Names
+
+```php ignore
+// Good
+'guards' => ['hasMinimumBalanceGuard', 'isWithinLimitGuard', 'hasValidPaymentGuard'],
+
+// Avoid
+'guards' => ['check1', 'validate', 'ok'],
+```
+
+### 3. Combine Simple Guards
+
+```php ignore
+// Multiple simple guards
+'guards' => ['isPositiveGuard', 'isWithinLimitGuard'],
+
+// Instead of one complex guard
+'guards' => 'isValidAmountGuard',
+```
+
+### 4. Use Validation Guards for User Input
+
+For guards that should return error messages, use [Validation Guards](/behaviors/validation-guards):
+
+```php
+use Tarfinlabs\EventMachine\Behavior\ValidationGuardBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+
+class ValidateAmountGuard extends ValidationGuardBehavior
+{
+    public ?string $errorMessage = null;
+
+    public function __invoke(ContextManager $context): bool
+    {
+        if ($context->amount <= 0) {
+            $this->errorMessage = 'Amount must be positive';
+            return false;
+        }
+        return true;
+    }
+}
+```
+
+::: tip Detailed Guide
+For comprehensive design guidelines with Do/Don't examples, see [Guard Design](/best-practices/guard-design).
+:::

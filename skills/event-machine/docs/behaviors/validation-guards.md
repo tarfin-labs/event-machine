@@ -1,0 +1,456 @@
+# Validation Guards
+
+Validation guards extend regular guards with the ability to provide error messages when validation fails. They're ideal for user input validation and form processing.
+
+## Basic Usage
+
+```php
+use Tarfinlabs\EventMachine\Behavior\ValidationGuardBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+
+class ValidateOrderGuard extends ValidationGuardBehavior
+{
+    public ?string $errorMessage = null;
+
+    public function __invoke(ContextManager $context): bool
+    {
+        if (empty($context->items)) {
+            $this->errorMessage = 'Order must have at least one item';
+            return false;
+        }
+
+        if ($context->total <= 0) {
+            $this->errorMessage = 'Order total must be greater than zero';
+            return false;
+        }
+
+        return true;
+    }
+}
+```
+
+## Exception Handling
+
+When a validation guard fails, `MachineValidationException` is thrown:
+
+```php no_run
+use Tarfinlabs\EventMachine\Exceptions\MachineValidationException;
+
+try {
+    $machine->send(['type' => 'SUBMIT']);
+} catch (MachineValidationException $e) {
+    $errorMessage = $e->getMessage();
+    // 'Order must have at least one item'
+}
+```
+
+## Multiple Validations
+
+Chain multiple validation guards:
+
+```php ignore
+'on' => [
+    'CHECKOUT' => [
+        'target' => 'processing',
+        'guards' => [
+            ValidateItemsGuard::class,
+            ValidatePaymentGuard::class,
+            ValidateAddressGuard::class,
+        ],
+    ],
+],
+```
+
+Guards are evaluated in order. The first failing guard throws an exception.
+
+## Practical Examples
+
+### Form Field Validation
+
+```php
+use Tarfinlabs\EventMachine\Behavior\ValidationGuardBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+
+class ValidateEmailGuard extends ValidationGuardBehavior
+{
+    public ?string $errorMessage = null;
+
+    public function __invoke(ContextManager $context): bool
+    {
+        if (empty($context->email)) {
+            $this->errorMessage = 'Email is required';
+            return false;
+        }
+
+        if (!filter_var($context->email, FILTER_VALIDATE_EMAIL)) {
+            $this->errorMessage = 'Please enter a valid email address';
+            return false;
+        }
+
+        return true;
+    }
+}
+```
+
+### Amount Validation
+
+```php
+use Tarfinlabs\EventMachine\Behavior\ValidationGuardBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\Behavior\EventBehavior; // [!code hide]
+use Tarfinlabs\EventMachine\ContextManager; // [!code hide]
+
+class ValidateAmountGuard extends ValidationGuardBehavior
+{
+    public ?string $errorMessage = null;
+
+    public function __invoke(
+        ContextManager $context,
+        EventBehavior $event,
+    ): bool {
+        $amount = $event->payload['amount'] ?? 0;
+
+        if ($amount <= 0) {
+            $this->errorMessage = 'Amount must be greater than zero';
+            return false;
+        }
+
+        if ($amount > $context->balance) {
+            $this->errorMessage = sprintf(
+                'Insufficient balance. Available: $%.2f',
+                $context->balance
+            );
+            return false;
+        }
+
+        if ($amount > 10000) {
+            $this->errorMessage = 'Amount cannot exceed $10,000';
+            return false;
+        }
+
+        return true;
+    }
+}
+```
+
+### Business Rule Validation
+
+```php no_run
+class ValidateBusinessHoursGuard extends ValidationGuardBehavior
+{
+    public ?string $errorMessage = null;
+
+    public function __invoke(): bool
+    {
+        $now = now();
+        $hour = $now->hour;
+        $dayOfWeek = $now->dayOfWeek;
+
+        // Weekend check
+        if ($dayOfWeek === 0 || $dayOfWeek === 6) {
+            $this->errorMessage = 'Orders cannot be placed on weekends';
+            return false;
+        }
+
+        // Business hours check
+        if ($hour < 9 || $hour >= 17) {
+            $this->errorMessage = 'Orders can only be placed between 9 AM and 5 PM';
+            return false;
+        }
+
+        return true;
+    }
+}
+```
+
+### Inventory Validation
+
+```php no_run
+class ValidateInventoryGuard extends ValidationGuardBehavior
+{
+    public ?string $errorMessage = null;
+
+    public function __construct(
+        private readonly InventoryService $inventory,
+    ) {}
+
+    public function __invoke(ContextManager $context): bool
+    {
+        foreach ($context->items as $item) {
+            $available = $this->inventory->getAvailable($item['id']);
+
+            if ($available < $item['quantity']) {
+                $this->errorMessage = sprintf(
+                    'Insufficient stock for "%s". Available: %d, Requested: %d',
+                    $item['name'],
+                    $available,
+                    $item['quantity']
+                );
+                return false;
+            }
+        }
+
+        return true;
+    }
+}
+```
+
+### User Permission Validation
+
+```php ignore
+class ValidatePermissionGuard extends ValidationGuardBehavior
+{
+    public ?string $errorMessage = null;
+
+    public function __construct(
+        private readonly AuthorizationService $auth,
+    ) {}
+
+    public function __invoke(
+        ContextManager $context,
+        string $permission = 'default',
+    ): bool {
+        if (!$this->auth->can($context->userId, $permission)) {
+            $this->errorMessage = sprintf(
+                'You do not have permission to perform this action. Required: %s',
+                $permission
+            );
+            return false;
+        }
+
+        return true;
+    }
+}
+
+// Usage
+'guards' => [[ValidatePermissionGuard::class, 'permission' => 'approve_orders']],
+```
+
+## Localized Messages
+
+Use Laravel's translation:
+
+```php no_run
+class ValidateOrderGuard extends ValidationGuardBehavior
+{
+    public ?string $errorMessage = null;
+
+    public function __invoke(ContextManager $context): bool
+    {
+        if (empty($context->items)) {
+            $this->errorMessage = __('validation.order.items_required');
+            return false;
+        }
+
+        return true;
+    }
+}
+```
+
+## Integration with Laravel Forms
+
+```php ignore
+// In Controller
+public function submit(Request $request)
+{
+    $machine = OrderMachine::create();
+
+    try {
+        $machine->send([
+            'type' => 'SUBMIT',
+            'payload' => $request->all(),
+        ]);
+
+        return redirect()->route('orders.show', $machine->state->context->orderId);
+
+    } catch (MachineValidationException $e) {
+        return back()
+            ->withInput()
+            ->withErrors(['submit' => $e->getMessage()]);
+    }
+}
+```
+
+## Combining with Regular Guards
+
+Mix validation guards with regular guards:
+
+```php ignore
+'on' => [
+    'SUBMIT' => [
+        'target' => 'submitted',
+        'guards' => [
+            // Regular guard - silent failure
+            'hasItemsGuard',
+            // Validation guard - throws with message
+            ValidatePaymentGuard::class,
+            // Another validation guard
+            ValidateAddressGuard::class,
+        ],
+    ],
+],
+```
+
+::: tip When to Use Each Type
+- **Regular Guards:** Return `false` to block transition without throwing an exception. Best for flow control where the caller doesn't need to know why.
+- **Validation Guards:** Return `false` and throw `MachineValidationException` with a user-facing error message. Best for user input validation where feedback is needed.
+
+Both types block the transition when they return `false`. The difference is whether the caller receives an exception with a message.
+:::
+
+## Testing Validation Guards
+
+### Via TestMachine — Exception Assertion
+
+<!-- doctest-attr: ignore -->
+```php
+OrderMachine::test()
+    ->assertValidationFailed(
+        ['type' => 'SUBMIT', 'payload' => ['amount' => -100]],
+        'amount',  // expected error key
+    );
+```
+
+### Faked — Bypass Validation
+
+<!-- doctest-attr: ignore -->
+```php
+ValidateOrderGuard::shouldReturn(true);  // force pass
+
+OrderMachine::test(['items' => []])
+    ->assertTransition('SUBMIT', 'processing');  // validation skipped
+```
+
+### Integration Testing
+
+```php no_run
+it('shows validation error when amount is too high', function () {
+    $machine = TransferMachine::create();
+    $machine->state->context->balance = 100;
+
+    expect(fn() => $machine->send([
+        'type' => 'TRANSFER',
+        'payload' => ['amount' => 500],
+    ]))->toThrow(
+        MachineValidationException::class,
+        'Insufficient balance'
+    );
+});
+
+it('passes validation with valid amount', function () {
+    $machine = TransferMachine::create();
+    $machine->state->context->balance = 1000;
+
+    $machine->send([
+        'type' => 'TRANSFER',
+        'payload' => ['amount' => 500],
+    ]);
+
+    expect($machine->state->matches('transferred'))->toBeTrue();
+});
+```
+
+::: tip Full Testing Guide
+See [Transitions & Paths](/testing/transitions-and-paths) for validation testing patterns.
+:::
+
+## Best Practices
+
+### 1. Be Specific with Error Messages
+
+```php ignore
+// Good - actionable message
+$this->errorMessage = 'Email is invalid. Please use format: name@example.com';
+
+// Avoid - vague message
+$this->errorMessage = 'Invalid input';
+```
+
+### 2. Validate Early
+
+```php ignore
+// Check required fields first
+if (empty($context->email)) {
+    $this->errorMessage = 'Email is required';
+    return false;
+}
+
+// Then validate format
+if (!filter_var($context->email, FILTER_VALIDATE_EMAIL)) {
+    $this->errorMessage = 'Invalid email format';
+    return false;
+}
+```
+
+### 3. Include Context in Messages
+
+```php ignore
+$this->errorMessage = sprintf(
+    'Cannot transfer $%.2f. Maximum allowed: $%.2f',
+    $requestedAmount,
+    $maxAmount
+);
+```
+
+### 4. Use Separate Guards for Separate Concerns
+
+```php ignore
+// Good - separate guards
+'guards' => [
+    ValidateEmailGuard::class,
+    ValidatePasswordGuard::class,
+    ValidateTermsAcceptedGuard::class,
+],
+
+// Avoid - one monolithic guard
+'guards' => ValidateEverythingGuard::class,
+```
+
+::: tip Detailed Guide
+For comprehensive design guidelines with Do/Don't examples, see [Guard Design](/best-practices/guard-design).
+:::
+
+## Parallel States {#parallel-states}
+
+When a `ValidationGuardBehavior` fails inside a parallel state region, the behavior differs from regular guards:
+
+| Guard Type | Failure in Parallel | Result |
+|-----------|-------------------|--------|
+| `GuardBehavior` | Graceful failure — same as non-parallel | `TRANSITION_FAIL` recorded, machine stays in current state |
+| `ValidationGuardBehavior` | **Entire parallel transition blocked** | Machine stays in current state, `MachineValidationException` thrown |
+
+A validation guard failure in **any** region blocks **all** regions from transitioning. This is intentional — validation rejection is atomic. The error message propagates as a 422 response through endpoints.
+
+```php ignore
+'data_collection' => [
+    'type' => 'parallel',
+    'states' => [
+        'vehicle_info' => [
+            'initial' => 'awaiting',
+            'states' => [
+                'awaiting' => [
+                    'on' => [
+                        VehicleSubmittedEvent::class => [
+                            'target' => 'received',
+                            // If this guard fails, ALL regions stay — 422 returned
+                            'guards' => IsVinValidGuard::class,
+                        ],
+                    ],
+                ],
+                'received' => ['type' => 'final'],
+            ],
+        ],
+        'documents' => [
+            // This region is also blocked if IsVinValidGuard fails
+            // ...
+        ],
+    ],
+],
+```
+
+### Dispatch Mode Limitation
+
+In dispatch mode (`parallel_dispatch.enabled = true`), each region runs as a separate queue job. Validation guard failures in dispatched regions:
+- Region doesn't transition (guard failure recorded in history)
+- Error does **not** propagate to the HTTP response (async execution)
+
+If synchronous validation feedback is needed, validate before entering the parallel state.
