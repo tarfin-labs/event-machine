@@ -117,8 +117,15 @@ class MachineScenarioCommand extends Command
             return self::FAILURE;
         }
 
-        if (count($paths) > 1 && $pathIndex === 0) {
-            $this->info('Found '.count($paths)." paths from {$source} to {$parentTarget}:");
+        // The listing renders for a single path too. The weight is the only place the command
+        // reports what the resolution cost, and a caller who sees it for two paths but not for
+        // one cannot compare this run against the next — which is the whole point of printing it.
+        if ($pathIndex === 0) {
+            $pathCount = count($paths);
+
+            $this->info($pathCount === 1
+                ? "Found 1 path from {$source} to {$parentTarget}:"
+                : "Found {$pathCount} paths from {$source} to {$parentTarget}:");
             $this->line('');
 
             foreach ($paths as $i => $p) {
@@ -130,7 +137,12 @@ class MachineScenarioCommand extends Command
             }
 
             $this->line('');
-            $this->info('Use --path=N to select. Using path [0].');
+
+            // Only when there is something to choose between: offering --path=N against a
+            // single path invites an index that is immediately out of range.
+            if ($pathCount > 1) {
+                $this->info('Use --path=N to select. Using path [0].');
+            }
         }
 
         if ($pathIndex >= count($paths)) {
