@@ -3,7 +3,7 @@
 **Status:** Upcoming
 **Affects:** `MachineDefinition::transition()`, `MachineDefinition::enterState()`, `StateDefinition::runExitActions()`, `StateDefinition::runEntryActions()`
 **SCXML Reference:** W3C SCXML Section 3.13 (Selecting and Executing Transitions), Appendix D (Algorithm for SCXML Interpretation)
-**Skipped Tests:** `tests/Features/ActionOrderingTest.php` tests #2 (deep hierarchy) and #3 (sibling transition)
+**Test status:** none. This referenced two skipped tests in `tests/Features/ActionOrderingTest.php`, but that file was rewritten and its eight tests all run — so nothing in the suite currently pins the missing LCA behaviour. Implementing this means writing those tests first.
 
 ---
 
