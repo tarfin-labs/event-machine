@@ -109,7 +109,7 @@ Scenario issues can be caught at different levels. Work through these tiers in o
 
 | Tier | Command / Pattern | Catches |
 |------|-------------------|---------|
-| 1. Structural | `machine:scenario-validate` | Source/event/target mismatch, non-existent state routes, path existence via BFS |
+| 1. Structural | `machine:scenario-validate` | Source/event/target mismatch, non-existent state routes, path existence |
 | 2. Path enumeration | `machine:paths <Machine>` | Verify override states are on reachable paths under intended guard conditions |
 | 3. Unit | `(new ScenarioPlayer(...))->execute()` in a test | Typed injection failures (`TypeError`), unexpected action side-effects, guard/action interactions |
 | 4. Integration | Full HTTP endpoint hit with `?scenario=slug` | End-to-end slug activation, context flow, response shape, real async behavior |
@@ -128,7 +128,7 @@ When a scenario fails or produces unexpected state:
 
 4. **Check `machine_current_states`:** The `scenario_class` column shows if a scenario is still active. If it's `null` when you expect it to be set, the deactivation flow may have cleared it.
 
-5. **Preview with `--dry-run`:** `php artisan machine:scenario AtReview OrderMachine pending SubmitEvent under_review --dry-run` shows the scaffolded plan without writing files — useful for understanding what path the BFS found.
+5. **Preview with `--dry-run`:** `php artisan machine:scenario AtReview OrderMachine pending SubmitEvent under_review --dry-run` shows the scaffolded plan without writing files — useful for understanding which route the resolver picked.
 
 6. **Async child runs full I/O instead of applying the scenario:** the dispatched child machine (parent state with `'queue:'`) made real external calls despite the scenario plan referencing it. Check three things:
    - **Package version >= 9.10.3** — earlier versions silently dropped child scenarios at async dispatch time
