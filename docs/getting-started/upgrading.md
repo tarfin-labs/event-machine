@@ -33,6 +33,57 @@ Each section below has step-by-step migration instructions with before/after exa
 
 ---
 
+## From 9.19.x to 9.20.0
+
+Scenario path resolution is now weighted. Everything here is confined to `machine:scenario`,
+`machine:scenario-validate` and `ScenarioPathResolver` — no runtime code path resolves scenario
+paths, so a running machine behaves identically. What changes is what those commands pick and print.
+
+### `--path=N` is re-indexed
+
+Paths are listed cheapest first rather than in the order the search found them. A pinned `--path=3`
+selects a different route than it did before, or is out of range. **Capture the listing before
+upgrading and re-match by signature**, not by index. Routes tied on both weight and length have no
+promised order at all, so `--path=N` is not a durable selector within such a group.
+
+### The default scaffold changes
+
+A caller passing no flags gets the cheapest route, which is often not the route it got before.
+`machine:scenario` therefore writes a different file for an unchanged machine, and a
+regenerate-and-diff CI check will report drift on the upgrade commit. Generated scaffolds are meant
+to be hand-edited — regenerate deliberately and diff before merging, or a blind regenerate
+overwrites author work.
+
+### `--max-iterations` is one budget for the whole resolution
+
+It used to be one per branch of the trigger event, so the effective ceiling was
+`maxIterations × branchCount`. Multiply a pinned value by the branch count. Operators who never
+pinned it lose the same headroom silently, since the default stays 1000.
+
+Truncation therefore becomes more likely, never less — both from the smaller effective ceiling and
+because the search now cuts in cost order rather than breadth order, deferring a target reachable
+only through an expensive state behind every cheaper frontier entry. `wasTruncated()` can report
+`true` where it reported `false` on an unchanged machine at an unchanged cap. "Truncated at the
+search limit" remains a different finding from "no path exists", and only the first is fixable by
+raising the number.
+
+### `machine:scenario` output changes, including for a single path
+
+Each listed path's stats line gains a trailing `weight N`, and both commands' `--max-iterations`
+description no longer calls the search BFS or the cap per-branch. Less obviously: **a single-path
+resolution now prints a listing where it previously printed nothing at all.** The listing was gated
+on there being more than one path; it now always renders, minus the `Use --path=N` hint. Update any
+test asserting these strings, and any parser that treated an absent listing as "one path".
+
+### `ScenarioPath` gains a serialised property
+
+`$totalWeight` appears in anything that serialises a path. It is *derived* in the constructor rather
+than accepted, so hydration that bypasses the constructor — `unserialize()`, reflection-based
+rebuilding — leaves it uninitialised and reading it throws. On rollback the mirror applies: a path
+serialised by 9.20 and read back by the old class carries `totalWeight` as an undeclared property,
+which is a dynamic-property deprecation on PHP 8.3 and fatal under a strict error handler. Do not
+carry a serialised `ScenarioPath` across the version boundary; regenerate it.
+
 ## From 9.18.x to 9.19.0
 
 ### The sweep commands now fail instead of exiting 0 having done nothing
