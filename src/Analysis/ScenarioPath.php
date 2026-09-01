@@ -11,11 +11,29 @@ namespace Tarfinlabs\EventMachine\Analysis;
 readonly class ScenarioPath
 {
     /**
+     * Sum of StateClassification::weight() over every step.
+     *
+     * Derived here rather than accepted as an argument, so it cannot be constructed
+     * inconsistently and every existing call site keeps working unchanged. The source
+     * state is not a step, so it is never priced: a one-step path weighs exactly what
+     * its single target weighs.
+     */
+    public int $totalWeight;
+
+    /**
      * @param  list<ScenarioPathStep>  $steps  Ordered steps from source to target.
      */
     public function __construct(
         public array $steps,
-    ) {}
+    ) {
+        $totalWeight = 0;
+
+        foreach ($steps as $step) {
+            $totalWeight += $step->classification->weight();
+        }
+
+        $this->totalWeight = $totalWeight;
+    }
 
     /**
      * Human-readable signature: "source→[event]→state→[event]→target".
