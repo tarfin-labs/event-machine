@@ -1,0 +1,63 @@
+<?php
+
+declare(strict_types=1);
+
+use Tarfinlabs\EventMachine\Analysis\MachineGraph;
+use Tarfinlabs\EventMachine\Analysis\ScenarioPath;
+use Tarfinlabs\EventMachine\Analysis\ScenarioPathStep;
+use Tarfinlabs\EventMachine\Analysis\StateClassification;
+use Tarfinlabs\EventMachine\Analysis\ScenarioPathResolver;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ScenarioDelegationEdgeMachine;
+
+function edgeResolver(): ScenarioPathResolver
+{
+    return new ScenarioPathResolver(new MachineGraph(ScenarioDelegationEdgeMachine::definition()));
+}
+
+function routeKeys(ScenarioPath $path): array
+{
+    return array_map(fn (ScenarioPathStep $s): string => $s->stateKey, $path->steps);
+}
+
+test('a delegation state with none of the four keys terminates a path', function (): void {
+    $resolver = edgeResolver();
+
+    // As the target it is reachable, and priced at 3 like any other delegation state.
+    $asTarget = $resolver->resolveAll('root', 'FF', 'fire_forget');
+
+    expect($asTarget)->toHaveCount(1)
+        ->and(routeKeys($asTarget[0]))->toBe(['fire_forget'])
+        ->and($asTarget[0]->steps[0]->classification)->toBe(StateClassification::DELEGATION)
+        ->and($asTarget[0]->totalWeight)->toBe(3);
+
+    // Beyond it there is nothing: its ordinary `on: CONTINUE` is not a successor the resolver
+    // follows, so after_edge is unreachable through it — and this is an exhausted search, not
+    // a truncated one, so the emptiness is a real answer rather than a cap.
+    $beyond = $resolver->resolveAll('root', 'FF', 'after_edge');
+
+    expect($beyond)->toBeEmpty()
+        ->and($resolver->wasTruncated())->toBeFalse();
+});
+
+test('a delegation state is walked by its four keys and by nothing else', function (): void {
+    $resolver = edgeResolver();
+
+    // Both delegation keys are followed, each reaching its own outcome.
+    $viaDone = $resolver->resolveAll('root', 'PARTIAL', 'recovered');
+    $viaFail = $resolver->resolveAll('root', 'PARTIAL', 'failed_out');
+
+    expect($viaDone)->toHaveCount(1)
+        ->and(routeKeys($viaDone[0]))->toBe(['fail_only', 'recovered'])
+        // fail_only (DELEGATION 3) + recovered (FINAL 0)
+        ->and($viaDone[0]->totalWeight)->toBe(3)
+        ->and($viaDone[0]->steps[1]->event)->toBe('@done')
+        ->and($viaFail)->toHaveCount(1)
+        ->and($viaFail[0]->steps[1]->event)->toBe('@fail');
+
+    // The ordinary `on: SKIP` on the same state contributes no successor at all, so after_edge
+    // stays unreachable through it — an exhausted search, not a truncated one.
+    $viaOrdinary = $resolver->resolveAll('root', 'PARTIAL', 'after_edge');
+
+    expect($viaOrdinary)->toBeEmpty()
+        ->and($resolver->wasTruncated())->toBeFalse();
+});
