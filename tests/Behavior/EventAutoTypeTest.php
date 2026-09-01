@@ -2,11 +2,13 @@
 
 declare(strict_types=1);
 
-use Illuminate\Support\Str;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Definition\EventDefinition;
 use Tarfinlabs\EventMachine\Tests\Stubs\Events\CallerEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Events\SimpleEvent;
+use Tarfinlabs\EventMachine\Tests\Stubs\Events\OrderSubmitted;
+use Tarfinlabs\EventMachine\Tests\Stubs\Events\EventCreatedEvent;
+use Tarfinlabs\EventMachine\Tests\Stubs\Events\Event as EventNamedEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Events\AddValueEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Events\IncreaseEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\Events\AddAnotherValueEvent;
@@ -23,20 +25,16 @@ test('auto-generates SCREAMING_SNAKE_CASE from class name for standard events', 
         ->and(ConfirmPaymentEvent::getType())->toBe('CONFIRM_PAYMENT');
 });
 
-test('auto-generates type for anonymous event class without Event suffix', function (): void {
-    $event = new class() extends EventBehavior {};
-
-    // Anonymous class basename is unpredictable, but the method should not throw
-    expect($event::getType())->toBeString()->not->toBeEmpty();
+test('auto-generates type for a class with no Event suffix', function (): void {
+    // OrderSubmitted has no suffix to strip, so beforeLast('Event') returns the basename as-is.
+    expect(OrderSubmitted::getType())->toBe('ORDER_SUBMITTED');
 });
 
-test('auto-generates type for class without Event suffix', function (): void {
-    $event = new class() extends EventBehavior {
-        // Simulate a class named "OrderSubmitted" (no Event suffix)
-        // by overriding to test the algorithm
-    };
+test('getType does not throw for an anonymous class', function (): void {
+    // An anonymous class basename is `class@anonymous...`, so the output is not meaningfully
+    // assertable -- only that the method survives it.
+    $event = new class() extends EventBehavior {};
 
-    // The default implementation should handle classes without Event suffix
     expect($event::getType())->toBeString()->not->toBeEmpty();
 });
 
@@ -68,55 +66,18 @@ test('EventDefinition existing override is unaffected', function (): void {
     expect(EventDefinition::getType())->toBe('(event)');
 });
 
-// --- Algorithm verification with inline classes ---
+// --- Algorithm edge cases, against real classes ---
+//
+// These three used to build anonymous classes that RE-IMPLEMENTED getType()'s body inline and
+// then asserted on that copy, so they passed no matter what EventBehavior::getType() did. They
+// now use named stubs and exercise the production method.
 
-test('strips Event suffix and converts to SCREAMING_SNAKE_CASE', function (): void {
-    $orderSubmitted = new class() extends EventBehavior {
-        public static function getType(): string
-        {
-            // Simulate what auto-generation would do for "OrderSubmittedEvent"
-            return parent::getType();
-        }
-    };
-
-    // Anonymous class — just verify it returns a string
-    expect($orderSubmitted::getType())->toBeString();
+test('falls back to the full basename when stripping Event empties it', function (): void {
+    // Tests\Stubs\Events\Event: beforeLast('Event') yields '', so the fallback returns 'Event'.
+    expect(EventNamedEvent::getType())->toBe('EVENT');
 });
 
-test('handles class where beforeLast Event would produce empty string', function (): void {
-    // Test the guard: a class named exactly "Event" would have empty stripped name
-    // The fallback should return the full class basename
-    $event = new class() extends EventBehavior {
-        public static function getType(): string
-        {
-            // Directly test the algorithm with a simulated "Event" basename
-            $baseName = Str::of('Event');
-            $stripped = $baseName->beforeLast('Event');
-
-            return ($stripped->isEmpty() ? $baseName : $stripped)
-                ->snake()
-                ->upper()
-                ->toString();
-        }
-    };
-
-    expect($event::getType())->toBe('EVENT');
-});
-
-test('handles class with Event in middle of name', function (): void {
-    // A class like "EventCreatedEvent" should strip last Event → "EventCreated" → EVENT_CREATED
-    $event = new class() extends EventBehavior {
-        public static function getType(): string
-        {
-            $baseName = Str::of('EventCreatedEvent');
-            $stripped = $baseName->beforeLast('Event');
-
-            return ($stripped->isEmpty() ? $baseName : $stripped)
-                ->snake()
-                ->upper()
-                ->toString();
-        }
-    };
-
-    expect($event::getType())->toBe('EVENT_CREATED');
+test('strips only the last Event when the name carries it twice', function (): void {
+    // EventCreatedEvent → EventCreated → EVENT_CREATED
+    expect(EventCreatedEvent::getType())->toBe('EVENT_CREATED');
 });
