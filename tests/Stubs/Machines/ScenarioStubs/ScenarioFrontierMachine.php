@@ -25,7 +25,7 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\Guards\IsEligible
  * trigger's own branches, which is the only shape where seeding one frontier from every branch
  * is what produces the order.
  *
- * SPLIT hangs off its own source state rather than `entry`. Adding a sixth event to `entry`
+ * SPLIT hangs off its own source state rather than `entry`. Hanging one more event on `entry`
  * would give the CYCLE case new successors to expand when it re-enters the source, quietly
  * changing what a test written for a different rule observes.
  */
