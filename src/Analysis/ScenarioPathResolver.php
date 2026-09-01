@@ -103,12 +103,22 @@ class ScenarioPathResolver
             // statically` from inside the resolver. Requiring an EventBehavior subclass settles
             // the signature: getType() is then guaranteed to exist and to be static.
             //
-            // It does NOT avoid the autoload, and an earlier version of this comment claimed it
-            // did. is_subclass_of() defaults to $allow_string = true, so it loads the named class
-            // exactly as class_exists() would; what it adds is the type check, not isolation.
-            // What makes that acceptable is the input, not the function: $event is a key from the
-            // machine's own definition, authored in this repo and already loaded by the
-            // definition it came from.
+            // It does NOT avoid the autoload. is_subclass_of() defaults to $allow_string = true,
+            // so it loads the named class exactly as class_exists() would; what it adds is the
+            // type check, not isolation. Two earlier versions of this comment claimed otherwise —
+            // first that no stranger is loaded, then that $event comes from the machine's own
+            // definition. Both are false, and the second is false on precisely this branch: the
+            // guard is consulted only when $eventTransition is null, which is to say only when
+            // $event did NOT match a transition key. An arbitrary FQCN never matches one, so it
+            // always reaches the autoload.
+            //
+            // The autoload is the feature, not a leak to be plugged. The command documents this
+            // argument as "class FQCN or event type string", and resolving an FQCN to its type
+            // means loading the class. Gating on class_exists($event, false) would make the
+            // sentence above true at the cost of silently failing to match any event class that
+            // was not already loaded. The residual exposure is a developer running
+            // `php artisan machine:scenario` with an argument of their own choosing, which is
+            // authority that command already has.
             if ($eventTransition === null && is_subclass_of($event, EventBehavior::class)) {
                 foreach ($transitions as $eventKey => $transition) {
                     if ($eventKey === $event::getType()) {
