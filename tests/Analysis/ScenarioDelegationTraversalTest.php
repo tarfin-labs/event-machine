@@ -16,7 +16,7 @@ test('a delegation state with none of the four keys terminates a path', function
     $resolver = edgeResolver();
 
     // As the target it is reachable, and priced at 3 like any other delegation state.
-    $asTarget = $resolver->resolveAll('root', 'FF', 'fire_forget');
+    $asTarget = $resolver->resolveAll('root', 'FIRE_AND_FORGET', 'fire_forget');
 
     expect($asTarget)->toHaveCount(1)
         ->and(scenarioStateKeys($asTarget[0]))->toBe(['fire_forget'])
@@ -27,7 +27,7 @@ test('a delegation state with none of the four keys terminates a path', function
     // fire-and-forget `target` and once as an ordinary `on: CONTINUE` — and the resolver
     // follows neither, so after_edge is unreachable through it. This is an exhausted search,
     // not a truncated one, so the emptiness is a real answer rather than a cap.
-    $beyond = $resolver->resolveAll('root', 'FF', 'after_edge');
+    $beyond = $resolver->resolveAll('root', 'FIRE_AND_FORGET', 'after_edge');
 
     expect($beyond)->toBeEmpty()
         ->and($resolver->wasTruncated())->toBeFalse();

@@ -43,9 +43,9 @@ class ScenarioDelegationEdgeMachine extends Machine
                 'states'  => [
                     'root' => [
                         'on' => [
-                            'FF'      => 'fire_forget',
-                            'PARTIAL' => 'fail_only',
-                            'PURE'    => 'fail_pure',
+                            'FIRE_AND_FORGET' => 'fire_forget',
+                            'PARTIAL'         => 'fail_only',
+                            'PURE'            => 'fail_pure',
                         ],
                     ],
                     'fire_forget' => [
