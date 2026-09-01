@@ -69,10 +69,12 @@ test('a delegation state carrying fail and no done is still walked by fail', fun
         ->and($viaFail[0]->totalWeight)->toBe(3)
         ->and($viaFail[0]->steps[1]->event)->toBe('@fail');
 
-    // Its `target` is the engine's fire-and-forget destination, not a transition, so it is not
-    // a successor either — the state is walkable by exactly one of the two keys it names.
-    $viaTarget = $resolver->resolveAll('root', 'PURE', 'after_edge');
+    // fail_pure names after_edge twice — as the engine's fire-and-forget `target` and as an
+    // ordinary `on: SKIP` — and neither is a successor. This is the half fail_only cannot show:
+    // it has @done, so "falls back to on: when @done is absent" survives every assertion made
+    // against it. Here @done IS absent and the ordinary transition is still not followed.
+    $viaOrdinary = $resolver->resolveAll('root', 'PURE', 'after_edge');
 
-    expect($viaTarget)->toBeEmpty()
+    expect($viaOrdinary)->toBeEmpty()
         ->and($resolver->wasTruncated())->toBeFalse();
 });
