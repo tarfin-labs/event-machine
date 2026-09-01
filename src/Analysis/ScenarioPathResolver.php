@@ -130,6 +130,20 @@ class ScenarioPathResolver
             );
         }
 
+        // Sort globally, not per branch: the loop above accumulates from every branch of the
+        // trigger transition, so anything narrower would leave a cheap path found by a later
+        // branch behind an expensive one found by an earlier one.
+        //
+        // Two keys, in order: total weight, then step count — among equally priced paths the
+        // shorter one is a shorter plan(). Paths tied on BOTH have no specified order; usort()
+        // is stable as of PHP 8.0, so they keep the order they were found in, but that order is
+        // deliberately not a promise and no test may assert it.
+        usort(
+            $paths,
+            static fn (ScenarioPath $a, ScenarioPath $b): int => [$a->totalWeight, count($a->steps)]
+                <=> [$b->totalWeight, count($b->steps)],
+        );
+
         return $paths;
     }
 
