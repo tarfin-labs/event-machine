@@ -17,13 +17,16 @@ scheduled.
 
 ## The four
 
-1. **A delegation state's ordinary `on:` transitions are never traversed.** The DELEGATION arm follows
-   only `@done`, `@done.{finalState}`, `@fail` and `@timeout`, so such a state has no successors, and
-   terminates any path reaching it, exactly when it carries none of those four keys. The runtime
-   disagrees for the fire-and-forget shape: a `machine`/`job` state with no `@done` but with ordinary
-   `on:` transitions is one the parent leaves by those transitions while the child runs independently.
-   The resolver dead-ends there and reports no path — a path that is *missing*, not a wrong one, so it
-   cannot be spotted by inspecting a returned result.
+1. **A delegation state is left only by its four delegation keys.** The DELEGATION arm follows only
+   `@done`, `@done.{finalState}`, `@fail` and `@timeout`, so such a state has no successors, and
+   terminates any path reaching it, exactly when it carries none of those four. The runtime disagrees
+   for the fire-and-forget shape, which is a `machine`/`job` state carrying a **`target`** rather than a
+   `@done` — the engine requires one or the other and rejects a state with neither, so the shape is not
+   the one an earlier draft of this file described. `target` is not among the four keys, so the resolver
+   dead-ends exactly where the parent leaves by it while the child runs independently. What that
+   produces is a path that is *missing*, not a wrong one, so it cannot be spotted by inspecting a
+   returned result. Pinned by `tests/Analysis/ScenarioDelegationTraversalTest.php`, which also shows an
+   ordinary `on:` transition on a delegation state contributing no successor either.
 2. **A deferred invoke that the macrostep skips is still traversed.** The invoke runs at the end of the
    macrostep and is skipped entirely if the machine has already moved. The resolver always traverses the
    four delegation keys and never the edge that moved the machine. Two shapes reach it. An `@always` on
