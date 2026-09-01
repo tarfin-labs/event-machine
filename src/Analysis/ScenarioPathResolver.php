@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tarfinlabs\EventMachine\Analysis;
 
 use Throwable;
+use SplPriorityQueue;
 use Tarfinlabs\EventMachine\Actor\Machine;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Enums\TransitionProperty;
@@ -152,7 +153,7 @@ class ScenarioPathResolver
             ];
         }
 
-        $this->bfs($frontier, $targetId, $paths);
+        $this->bestFirst($frontier, $targetId, $paths);
 
         // Sort globally, not per branch: the loop above accumulates from every branch of the
         // trigger transition, so anything narrower would leave a cheap path found by a later
@@ -174,24 +175,48 @@ class ScenarioPathResolver
     /**
      * Walk one frontier to the target, recording every simple path that reaches it.
      *
-     * The frontier arrives already seeded by resolveAll(), which is what makes this a single
-     * search over every branch of the trigger rather than one search per branch. Expansion is
-     * still FIFO, so this is still breadth-first; ordering it by cost is a separate change.
+     * The seeds arrive from resolveAll(), which is what makes this a single search over every
+     * branch of the trigger rather than one search per branch.
      *
-     * @param  list<array{0: StateDefinition, 1: list<ScenarioPathStep>, 2: array<string, true>, 3: int}>  $frontier
+     * Four properties, and only these four, are promised:
+     *
+     *   1. entries expand in non-decreasing order of accumulated cost;
+     *   2. among entries of equal cost, expansion order is insertion order (FIFO);
+     *   3. for a given definition and cap, both the returned set and its order are the same on
+     *      every run and in every process;
+     *   4. the truncation flag is set exactly when the loop stops with the frontier non-empty.
+     *
+     * The second is not automatic. SplPriorityQueue gives no defined order among equal
+     * priorities, so a bare -$cost priority would leave which paths were found before the cap
+     * dependent on heap internals. The composite [-$cost, -$sequence] fixes it: PHP compares
+     * array priorities element-wise, so this is cost first, insertion order second, and the
+     * negation is because the queue is a max-heap.
+     *
+     * @param  list<array{0: StateDefinition, 1: list<ScenarioPathStep>, 2: array<string, true>, 3: int}>  $seeds
      * @param  list<ScenarioPath>  $results  Accumulated results (passed by reference).
      */
-    private function bfs(array $frontier, string $targetId, array &$results): void
+    private function bestFirst(array $seeds, string $targetId, array &$results): void
     {
+        /** @var SplPriorityQueue<array{0: int, 1: int}, array{0: StateDefinition, 1: list<ScenarioPathStep>, 2: array<string, true>, 3: int}> $frontier */
+        $frontier = new SplPriorityQueue();
+        $frontier->setExtractFlags(SplPriorityQueue::EXTR_DATA);
+
+        $sequence = 0;
+
+        foreach ($seeds as $seed) {
+            $frontier->insert($seed, [-$seed[3], -$sequence]);
+            $sequence++;
+        }
+
         // One budget for the whole resolution, not one per branch, counting expansions: one
         // increment per entry taken off the frontier. For a multi-branch trigger the effective
         // ceiling therefore drops — it used to be maxIterations times the branch count.
         $maxIter = $this->maxIterations;
         $iter    = 0;
 
-        while ($frontier !== [] && $iter < $maxIter) {
+        while (!$frontier->isEmpty() && $iter < $maxIter) {
             $iter++;
-            [$currentState, $currentPath, $visited, $cost] = array_shift($frontier);
+            [$currentState, $currentPath, $visited, $cost] = $frontier->extract();
 
             foreach ($this->getNextStates($currentState) as [$nextState, $nextEvent, $nextGuards, $nextActions]) {
                 if (isset($visited[$nextState->id])) {
@@ -211,8 +236,10 @@ class ScenarioPathResolver
 
                 $newVisited                 = $visited;
                 $newVisited[$nextState->id] = true;
+                $nextCost                   = $cost + $step->classification->weight();
 
-                $frontier[] = [$nextState, $newPath, $newVisited, $cost + $step->classification->weight()];
+                $frontier->insert([$nextState, $newPath, $newVisited, $nextCost], [-$nextCost, -$sequence]);
+                $sequence++;
             }
         }
 
@@ -220,7 +247,7 @@ class ScenarioPathResolver
         // an exhausted search, while a non-empty one means the cap stopped us with work
         // still pending. Without recording that, a caller cannot tell "there is no path"
         // from "I stopped looking".
-        if ($frontier !== []) {
+        if (!$frontier->isEmpty()) {
             $this->truncated = true;
         }
     }
