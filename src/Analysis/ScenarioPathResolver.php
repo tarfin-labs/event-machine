@@ -101,7 +101,14 @@ class ScenarioPathResolver
             // before anything has established it is an event at all, and method_exists() then
             // admits a non-static getType() — which raised `Non-static method cannot be called
             // statically` from inside the resolver. Requiring an EventBehavior subclass settles
-            // both: the signature is guaranteed, and a stranger is never loaded.
+            // the signature: getType() is then guaranteed to exist and to be static.
+            //
+            // It does NOT avoid the autoload, and an earlier version of this comment claimed it
+            // did. is_subclass_of() defaults to $allow_string = true, so it loads the named class
+            // exactly as class_exists() would; what it adds is the type check, not isolation.
+            // What makes that acceptable is the input, not the function: $event is a key from the
+            // machine's own definition, authored in this repo and already loaded by the
+            // definition it came from.
             if ($eventTransition === null && is_subclass_of($event, EventBehavior::class)) {
                 foreach ($transitions as $eventKey => $transition) {
                     if ($eventKey === $event::getType()) {
