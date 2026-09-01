@@ -3,11 +3,11 @@
 > **Status:** Draft — a catalogue, not a plan. Nothing here is scheduled.
 
 Four places where the resolver's view of a `MachineDefinition` differs from what the machine does at
-runtime. All four predate `spec/upcoming-weighted-path-resolution.md` and are out of scope for it; they
+runtime. All four predate `spec/9.20.0-weighted-path-resolution.md` and are out of scope for it; they
 were enumerated during that spec's review and moved here so it could specify its change rather than the
 resolver's whole standing behaviour. Each was checked against the code when written.
 
-That spec's own accepted imprecisions live in `spec/upcoming-weighted-path-resolution.derivation.md`,
+That spec's own accepted imprecisions live in `spec/9.20.0-weighted-path-resolution.derivation.md`,
 not here. This file is only about the graph-versus-runtime gap.
 
 Weighted resolution makes several of these shapes *more* likely to win — a free `@always` chain and a
