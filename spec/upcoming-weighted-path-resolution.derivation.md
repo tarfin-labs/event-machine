@@ -1,0 +1,101 @@
+# Weighted Path Resolution — Derivation
+
+Companion to `spec/upcoming-weighted-path-resolution.md`. This file holds material that belongs to
+**that change** but not in its specification: the imprecisions its weight scale accepts, and the
+reasoning behind two decisions the spec states without arguing.
+
+For disagreements between `ScenarioPathResolver`'s graph and the runtime — which predate this change
+and are out of scope for it — see `spec/draft-scenario-resolver-runtime-divergences.md` instead.
+
+## What the weight scale does not distinguish
+
+The model prices classifications of states entered. These are things a scenario author pays for that it
+cannot see. Each is an accepted imprecision; the alternative — a cost function over transitions rather
+than states — is a different and much larger design.
+
+- **Region count.** PARALLEL is a flat 5 whether the state has two regions or eight.
+- **Leaving a parallel state via `@done`.** `@done` fires only when *every* region is final, so a path
+  taking that exit obliges the author to drive all N regions to final states — the exiting path walks
+  none of them — at no cost in the model. This is the largest single under-price in the scale.
+- **Leaving a parallel state by its own event transition.** The resolver traverses a parallel state's
+  non-`@always` event transitions, and nothing prices that exit separately. §4's worked example takes
+  exactly this route.
+- **Delegation shape.** DELEGATION is a flat 3 across every form: a state with `@done.{finalState}`
+  branches plus `@fail` plus `@timeout` needs a choice among several outcomes; one carrying a single
+  `@done` needs no choice at all.
+- **The route out.** Leaving a delegation state via `@timeout` — standing in for a timeout — costs what
+  leaving it via the pre-filled `@done` costs. Leaving a parallel state via `@fail`, forcing a region to
+  fail, costs what `@done` costs.
+- **A self-raised event over-prices.** INTERACTIVE is charged 1 even when the state is left by an event
+  an entry action `raise()`s, which the scenario supplies nothing for.
+- **A child-sent event under-prices.** A state left by a child's `sendToParent()`/`dispatchToParent()`
+  is also charged 1, though standing in for a child is what DELEGATION is charged 3 for. These two
+  bullets err in opposite directions; a reader correcting "the imprecision" would move one the wrong way.
+- **Guards on ordinary transitions.** Guard overrides are the unit the metric is built on, yet a guarded
+  INTERACTIVE costs the same 1 as an unguarded one. The trigger transition's own guards are never priced
+  at all, because the source state is not a step — so selecting a non-first trigger branch is free in the
+  model and not free for the author.
+- **An inherited `@always` prices a whole subtree at 0.** `classifyState()` resolves `@always` through
+  the parent chain, so one ancestor's `@always` classifies every descendant TRANSIENT — including a leaf
+  a scenario can only enter by sending an event. Those states are charged 0 and the author pays for each
+  of them. This is the scale's broadest under-price and the least visible, since nothing in the state's
+  own definition shows it.
+
+### Timers and scheduled events are deliberately absent
+
+An earlier draft listed "advancing time under-prices" as an imprecision, on the reasoning that firing a
+timer is heavier than sending an event. **That was reversed**, and the reversal is a decision rather than
+a move: `after`/`every` are keys on an ordinary event transition, the scaffolder emits the ordinary
+`'@continue' => Event::class` entry for it, and a scenario can send that event directly rather than
+travelling time. If the emitted entry drives the transition — and nothing suggests it does not — then
+INTERACTIVE's 1 prices it correctly and there is no imprecision to record. The same reasoning removed a
+`schedules:` bullet: a scheduled event's transition is an ordinary event transition too.
+
+The claim that would reopen this: a demonstration that the emitted `@continue` entry does **not** drive a
+timer-driven or schedule-driven transition. That would not be a mispricing — it would mean the scaffold
+is unusable for those states, which is a defect of a different kind.
+
+## Why `resolve()` must not short-circuit
+
+The spec states this and gives the short form. The full argument, which took several review rounds to
+get right, is worth keeping because two earlier versions of it were wrong.
+
+`resolve()` and a short-circuiting implementation **agree on cost**. The target has one fixed weight
+`w(T)`; a record costs the expanded parent's cost plus `w(T)`; the frontier expands parents in
+non-decreasing cost. So record cost is monotone in record order and the first record is always a cheapest
+one. An earlier version claimed otherwise, with arithmetic that silently varied `w(T)` between the two
+sides of the comparison — it is unconstructible.
+
+They **differ on length**, and that is the whole witness. Record order among equal-cost paths follows the
+frontier, not the path. The fixture:
+
+```
+long:  A(0) → B(0) → C(0) → D(DELEGATION 3) → T(0)    weight 3, 5 steps
+short: A(0) → M(DELEGATION 3) → N(0) → T(0)           weight 3, 4 steps
+```
+
+Expanding A pushes B at 0 and M at 3. B and C expand for free and push D at 3. In the cost-3 band M
+(inserted first) expands before D and pushes N at 3. Now D precedes N in insertion order, so the **long**
+path is recorded first. `resolve()` returns the short one on the step-count key; a short-circuiting
+implementation returns the long one. The result is the same whichever order A's successors are pushed in.
+
+## Why the tie order is left unspecified
+
+Paths tied on both sort keys have no specified order, and three ways to give them one were tried and
+rejected. The rejections are recorded so none is proposed again.
+
+- **Deriving the order from the frontier.** Two tied paths can have prefixes of differing cost, so they
+  are never equal-priority frontier entries, and no rule stated in terms of neighbour order at their
+  divergence point holds. Counterexample: successors x1 (weight 3) then y1 (weight 0) at a state S, with
+  X = x1→x2(0)→T and Y = y1→y2(3)→T. Neighbour order predicts X first; the expansion order y1(0), x1(3),
+  y2(3), x2(3) records Y first.
+- **A `signature()` third key.** Not total. Two guarded branches of one trigger transition may legally
+  share a target; each is recorded as a one-step path carrying the same state and the same event, so
+  their signatures are identical while the paths are distinct.
+- **Specifying the recording order.** It is well defined and, via the cap-derivation procedure, reachable
+  from outside — so unobservability is not the objection. The objection is that it would make every
+  change to the search a change to the public contract, silently.
+- **A structural key over trigger-branch and successor indices.** Total and definition-derivable, but it
+  would *promise* config line order as a contract. Config order already decides tied order incidentally,
+  through insertion order and `usort()` stability; the difference between incidental and promised is the
+  whole objection.
