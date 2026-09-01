@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 use Tarfinlabs\EventMachine\Analysis\MachineGraph;
 use Tarfinlabs\EventMachine\Analysis\ScenarioPath;
-use Tarfinlabs\EventMachine\Analysis\ScenarioPathStep;
 use Tarfinlabs\EventMachine\Analysis\ScenarioPathResolver;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ScenarioOrderingMachine;
 
+/**
+ * @return list<ScenarioPath>
+ */
 function orderingPaths(): array
 {
     $resolver = new ScenarioPathResolver(new MachineGraph(ScenarioOrderingMachine::definition()));
@@ -15,9 +17,15 @@ function orderingPaths(): array
     return $resolver->resolveAll('pending', 'SUBMIT', 'approved');
 }
 
-function signatureOf(ScenarioPath $path): string
+/**
+ * The path's state keys joined for readable assertions.
+ *
+ * Deliberately not named after ScenarioPath::signature(): that method exists, produces a
+ * different string, and a helper shadowing its name would read as the same thing.
+ */
+function orderingSignature(ScenarioPath $path): string
 {
-    return implode('→', array_map(fn (ScenarioPathStep $s): string => $s->stateKey, $path->steps));
+    return implode('→', scenarioStateKeys($path));
 }
 
 test('cheaper paths come before more expensive ones', function (): void {
@@ -37,7 +45,7 @@ test('resolve returns the cheapest route, not the parallel one', function (): vo
     // The spec's worked example: the parallel route weighs 7 over the same four steps.
     expect($cheapest->totalWeight)->toBe(3)
         ->and($cheapest->steps)->toHaveCount(4)
-        ->and(signatureOf($cheapest))->not->toContain('verification');
+        ->and(orderingSignature($cheapest))->not->toContain('verification');
 });
 
 test('among equally priced paths the shorter one comes first', function (): void {
@@ -56,7 +64,7 @@ test('paths tied on weight and length are both returned, in no promised order', 
     $paths = orderingPaths();
 
     $tied = array_map(
-        signatureOf(...),
+        orderingSignature(...),
         array_filter(
             $paths,
             fn (ScenarioPath $p): bool => $p->totalWeight === 3 && count($p->steps) === 4,
@@ -78,8 +86,8 @@ test('when every step is interactive the order is by step count', function (): v
     // step between them, cost is the step count, so ordering by cost orders by length.
     $interactiveOnly = array_values(array_filter(
         $paths,
-        fn (ScenarioPath $p): bool => !str_contains(signatureOf($p), 'slow_hop')
-            && !str_contains(signatureOf($p), 'verification'),
+        fn (ScenarioPath $p): bool => !str_contains(orderingSignature($p), 'slow_hop')
+            && !str_contains(orderingSignature($p), 'verification'),
     ));
 
     $pairs = array_map(
