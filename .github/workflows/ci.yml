@@ -4,6 +4,19 @@ on:
   push:
     branches: [main, '*.x']
   pull_request:
+  # Nothing here is pinned: composer.lock is not committed, so every run resolves
+  # the newest versions the constraints allow. That is deliberate for a library --
+  # it is what consumers will get -- but it means the tools can change under a
+  # commit that did not. Without a clock, the change surfaces whenever someone
+  # happens to push next, attributed to whatever they were working on.
+  #
+  # It happened: main last ran CI on 2026-09-01 and was green. Pint shipped
+  # 1.30.6 through 1.32.1 between the 7th and the 10th, Rector shipped 2.6.7 on
+  # the 13th, and the next run -- an unrelated PR on the 16th -- failed on five
+  # files nobody had touched. A nightly run puts that failure on main, alone, the
+  # morning it appears.
+  schedule:
+    - cron: '0 6 * * *'
   workflow_dispatch:
 
 jobs:
@@ -146,6 +159,26 @@ jobs:
       - name: Remove Laravel 12+ only packages
         if: matrix.laravel == '11'
         run: composer remove --dev laravel/pao --no-update
+
+      # Downloaded archives only -- this is Composer's cache directory, not vendor/
+      # and not a lock file, so `composer update` below still resolves the newest
+      # allowed versions on every run. The cache can make an install quicker; it
+      # cannot make a run reproducible, and it cannot hide a dependency change.
+      #
+      # Placed after the conditional `composer remove` steps so the key covers the
+      # composer.json each combination actually installs from.
+      - name: Determine Composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Composer downloads
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: composer-${{ matrix.php }}-${{ matrix.laravel }}-${{ matrix.stability }}-${{ hashFiles('composer.json') }}
+          restore-keys: |
+            composer-${{ matrix.php }}-${{ matrix.laravel }}-${{ matrix.stability }}-
+            composer-${{ matrix.php }}-
 
       - name: Install dependencies
         run: composer update --${{ matrix.stability }} --prefer-dist --no-interaction --no-progress --with="illuminate/contracts:^${{ matrix.laravel }}"
