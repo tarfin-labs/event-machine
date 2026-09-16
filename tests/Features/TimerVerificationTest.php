@@ -151,7 +151,7 @@ it('extractTimerConfig: mixed array (multi-branch + after)', function (): void {
                     'E' => [
                         ['target' => 'b', 'guards' => 'g1'],
                         ['target' => 'c'],
-                        'after'   => Timer::days(7),
+                        'after' => Timer::days(7),
                     ],
                 ]],
                 'b' => ['type' => 'final'],

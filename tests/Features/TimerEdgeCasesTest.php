@@ -102,7 +102,7 @@ it('mixed array: multi-branch guarded transition with after key', function (): v
                         'TIMEOUT' => [
                             ['target' => 'cancelled', 'guards' => 'isExpiredGuard'],
                             ['target' => 'extended'],
-                            'after'   => Timer::days(7),
+                            'after' => Timer::days(7),
                         ],
                     ],
                 ],
@@ -144,7 +144,7 @@ it('multi-branch guarded after: guard pass goes to first branch', function (): v
                         'TIMEOUT' => [
                             ['target' => 'cancelled', 'guards' => 'isExpiredGuard'],
                             ['target' => 'extended'],
-                            'after'   => Timer::days(7),
+                            'after' => Timer::days(7),
                         ],
                     ],
                 ],
@@ -177,7 +177,7 @@ it('multi-branch guarded after: guard fail goes to fallback branch', function ()
                         'TIMEOUT' => [
                             ['target' => 'cancelled', 'guards' => 'isExpiredGuard'],
                             ['target' => 'extended'],
-                            'after'   => Timer::days(7),
+                            'after' => Timer::days(7),
                         ],
                     ],
                 ],

@@ -135,7 +135,7 @@ it('E2E: @after with guarded multi-branch transition via real pipeline', functio
                         'TIMEOUT' => [
                             ['target' => 'cancelled', 'guards' => 'isExpiredGuard'],
                             ['target' => 'extended'],
-                            'after'   => Timer::days(7),
+                            'after' => Timer::days(7),
                         ],
                     ],
                 ],
