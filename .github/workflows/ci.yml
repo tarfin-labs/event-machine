@@ -67,7 +67,6 @@ jobs:
 
       - name: Run PHPStan
         run: ./vendor/bin/phpstan analyse --error-format=github
-        continue-on-error: true
 
   pest-types:
     name: Pest Types
@@ -104,8 +103,14 @@ jobs:
       - name: Install composer dependencies
         uses: ramsey/composer-install@v4
 
+      # Runs the same command the local quality gate runs, so a CRAP failure here
+      # reproduces with `composer test` rather than only in CI.
       - name: Execute tests with coverage
-        run: vendor/bin/pest --coverage --min=80 --colors=always --order-by=random --testsuite='Tarfinlabs Test Suite'
+        run: composer test:coverage
+
+      # Reads the clover report the step above produced — no second test run.
+      - name: CRAP gate
+        run: composer test:crap
 
   pest:
     name: P${{ matrix.php }} - L${{ matrix.laravel }} - ${{ matrix.stability }}

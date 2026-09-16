@@ -69,7 +69,8 @@
         "test:unit": "pest --parallel --colors=always --order-by=random --testsuite='Tarfinlabs Test Suite'",
         "test:localqa": "pest tests/LocalQA --colors=always --order-by=random",
         "test:types": "pest --type-coverage --min=100 --colors=always --testsuite='Tarfinlabs Test Suite'",
-        "test:coverage": "pest --coverage --colors=always --min=80 --testsuite='Tarfinlabs Test Suite'",
+        "test:coverage": "pest --parallel --coverage --colors=always --min=80 --order-by=random --testsuite='Tarfinlabs Test Suite'",
+        "test:crap": "@php scripts/crap.php",
         "test:profile": "pest --profile --colors=always --order-by=random",
         "test:mutation": "pest --mutate --parallel --everything",
         "test:doc": "doctest --parallel",
@@ -78,7 +79,8 @@
             "@test:pint",
             "@test:autoload",
             "@test:phpstan",
-            "@test:unit",
+            "@test:coverage",
+            "@test:crap",
             "@test:types"
         ],
         "quality": [
