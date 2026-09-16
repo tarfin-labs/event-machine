@@ -7,10 +7,13 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Events\SimpleEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\AbcMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Events\ValidatedEvent;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\OrderMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Failures\PaymentFailure;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\GuardedMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ElevatorMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Inputs\ContractShapeInput;
 use Tarfinlabs\EventMachine\Tests\Stubs\Guards\IsAmountInRangeGuard;
 use Tarfinlabs\EventMachine\Tests\Stubs\Events\MachineRegisteredEvent;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TypedDelegation\TypedChildMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ChildDelegation\AsyncParentMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\EventResolution\EventResolutionMachine;
@@ -490,6 +493,63 @@ it('exports fire-and-forget with target in meta', function (): void {
         ->and($invoke['meta']['eventMachine']['target'])->toBe('prevented')
         ->and($invoke)->not->toHaveKey('onDone')
         ->and($invoke)->not->toHaveKey('onError');
+});
+
+// endregion
+
+// region Typed Contract Export
+
+it('exports a machine input contract as XState types.input', function (): void {
+    $command = new ExportXStateCommand();
+    $method  = new ReflectionMethod($command, 'buildMachineNode');
+    $xstate  = $method->invoke($command, TypedChildMachine::definition());
+
+    // PaymentInput: string $orderId, int $amount, string $currency = 'TRY'
+    expect($xstate)->toHaveKey('types')
+        ->and($xstate['types']['input'])->toBe([
+            'orderId'  => '',
+            'amount'   => 0,
+            'currency' => 'TRY',
+        ]);
+});
+
+it('exports a machine failure contract under meta.eventMachine', function (): void {
+    $command = new ExportXStateCommand();
+    $method  = new ReflectionMethod($command, 'buildMachineNode');
+    $xstate  = $method->invoke($command, TypedChildMachine::definition());
+
+    $failure = $xstate['meta']['eventMachine']['failure'];
+
+    // PaymentFailure's ?string $gatewayResponse is nullable, so it defaults to null
+    // before the "has a default value" arm is ever reached.
+    expect($failure['class'])->toBe(PaymentFailure::class)
+        ->and($failure['properties'])->toBe([
+            'errorCode'       => '',
+            'message'         => '',
+            'gatewayResponse' => null,
+        ]);
+});
+
+it('derives an XState default for every supported contract property type', function (): void {
+    $command = new ExportXStateCommand();
+    $method  = new ReflectionMethod($command, 'reflectContractProperties');
+
+    expect($method->invoke($command, ContractShapeInput::class))->toBe([
+        'isExpress'    => false,
+        'lineItems'    => [],
+        'discountRate' => 0,
+        'reference'    => null,   // union type has no single named type
+        'placedAt'     => null,   // unrecognised class type falls through
+    ]);
+});
+
+it('omits types and failure meta for a machine with no typed contracts', function (): void {
+    // The control: an untyped machine must not grow an empty types block.
+    $command = new ExportXStateCommand();
+    $method  = new ReflectionMethod($command, 'buildMachineNode');
+    $xstate  = $method->invoke($command, AbcMachine::definition());
+
+    expect($xstate)->not->toHaveKey('types');
 });
 
 // endregion
