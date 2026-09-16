@@ -18,7 +18,7 @@ use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Parallel\ReentrantParallelMachi
  */
 function enumerateOutOfProcess(string $machineClass, ?int $maxDepth = null): array
 {
-    $script = dirname(__DIR__).'/Support/enumerate-machine.php';
+    $script = __DIR__.'/../Support/enumerate-machine.php';
 
     // PHP_BINARY rather than 'php': it removes the PATH dependency outright and
     // guarantees the subprocess runs the same interpreter as the suite, which matters
