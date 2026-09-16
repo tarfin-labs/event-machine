@@ -5,12 +5,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Development Commands
 
 ### Testing
-- `composer test` - Run full test suite (rector, pint, phpstan, unit tests in parallel, type coverage)
+- `composer test` - Run full test suite (rector, pint, phpstan, tests with coverage, CRAP gate, type coverage). Needs pcov or xdebug, because the suite runs instrumented.
 - `composer quality` - Run pint + rector + test (the standard quality gate)
-- `composer test:unit` - Run only unit tests in parallel
+- `composer test:unit` - Run only unit tests in parallel (no coverage; for quick ad-hoc runs)
 - `composer test:types` - Run type coverage (100% minimum enforced)
 - `composer test:phpstan` - Run static analysis with PHPStan
-- `composer test:coverage` - Run tests with coverage report (80% minimum)
+- `composer test:coverage` - Run tests in parallel with coverage report (80% minimum)
+- `composer test:crap` - CRAP gate: fails when a method with complexity >= 5 has no coverage at all. Reads the clover report `test:coverage` wrote, so it adds no test run — but it fails closed if that report is missing or older than `src/`.
 - `composer test:mutation` - Run mutation testing
 - `composer test:profile` - Run tests with profiling
 
