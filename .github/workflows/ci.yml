@@ -160,6 +160,26 @@ jobs:
         if: matrix.laravel == '11'
         run: composer remove --dev laravel/pao --no-update
 
+      # Downloaded archives only -- this is Composer's cache directory, not vendor/
+      # and not a lock file, so `composer update` below still resolves the newest
+      # allowed versions on every run. The cache can make an install quicker; it
+      # cannot make a run reproducible, and it cannot hide a dependency change.
+      #
+      # Placed after the conditional `composer remove` steps so the key covers the
+      # composer.json each combination actually installs from.
+      - name: Determine Composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Composer downloads
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: composer-${{ matrix.php }}-${{ matrix.laravel }}-${{ matrix.stability }}-${{ hashFiles('composer.json') }}
+          restore-keys: |
+            composer-${{ matrix.php }}-${{ matrix.laravel }}-${{ matrix.stability }}-
+            composer-${{ matrix.php }}-
+
       - name: Install dependencies
         run: composer update --${{ matrix.stability }} --prefer-dist --no-interaction --no-progress --with="illuminate/contracts:^${{ matrix.laravel }}"
 
