@@ -30,6 +30,11 @@
 # breaks hunk-level commit splitting and symbol-addressed edits.
 *.php diff=php
 
+# The published migrations are PHP under a .stub extension, which *.php does not
+# match. Without this they had no driver at all: a change inside a migration's up()
+# was labelled with the class line, so the whole file read as one section.
+*.php.stub diff=php
+
 # Pest tests are top-level `it(...)` / `test(...)` closures, not methods, so the
 # stock php driver treats a whole test file as one section. This driver opens a
 # section per test, making one-commit-per-test enforceable.
@@ -45,3 +50,12 @@ tests/**/*.php diff=pest
 # groups by exactly that label. With the driver they become "### MachineDefinition
 # NotFoundException" and "## Version Compatibility".
 *.md diff=markdown
+
+# The docs theme's stylesheet: with the driver a hunk is labelled with the rule it
+# sits in, without one it gets no label at all.
+*.css diff=css
+
+# Deliberately absent: *.sh has no driver because none of the scripts declare
+# functions, so git's default already labels every hunk the same way the bash
+# driver would. The .vitepress TypeScript and Vue files have no built-in driver
+# to point at — git ships none for either.
