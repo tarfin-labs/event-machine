@@ -67,7 +67,6 @@ jobs:
 
       - name: Run PHPStan
         run: ./vendor/bin/phpstan analyse --error-format=github
-        continue-on-error: true
 
   pest-types:
     name: Pest Types
