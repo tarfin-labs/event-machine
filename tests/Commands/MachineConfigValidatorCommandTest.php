@@ -5,12 +5,19 @@ declare(strict_types=1);
 namespace Tarfinlabs\EventMachine\Tests\Commands;
 
 use Illuminate\Contracts\Console\Kernel;
+use Illuminate\Console\Scheduling\Schedule;
 use Symfony\Component\Console\Command\Command;
+use Tarfinlabs\EventMachine\Scheduling\MachineTimer;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\AbcMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Xyz\XyzMachine;
 use Tarfinlabs\EventMachine\Commands\MachineConfigValidatorCommand;
 use Tarfinlabs\EventMachine\Fixtures\InvalidMachines\MiswiredContextMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TimerMachines\AfterTimerMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TimerMachines\EveryTimerMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TimerMachines\EveryWithMaxMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\LoopMachines\AlwaysLoopOnTimerMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\BehaviorCoverage\BehaviorCoverageMachine;
 
 it('test it validates machine with valid config', function (): void {
     $this
@@ -48,6 +55,18 @@ it('test it reports a machine identically whether named or swept', function (): 
         ->artisan('machine:validate', ['machine' => [class_basename(AbcMachine::class)]])
         ->expectsOutput($line)
         ->assertExitCode(Command::SUCCESS);
+
+    // Every discoverable stub with timers gets its sweep, as an application's routes/console.php
+    // would give it; without one, the sweep below rightly fails those machines.
+    foreach ([
+        AfterTimerMachine::class,
+        EveryTimerMachine::class,
+        EveryWithMaxMachine::class,
+        AlwaysLoopOnTimerMachine::class,
+        BehaviorCoverageMachine::class,
+    ] as $timerMachine) {
+        MachineTimer::register($timerMachine);
+    }
 
     // The only full sweep in this file. A sweep builds every discoverable machine
     // definition and reflects over every behavior, so it is by far the most expensive
