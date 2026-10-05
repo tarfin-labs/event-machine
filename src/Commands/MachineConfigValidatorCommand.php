@@ -13,10 +13,12 @@ use PhpParser\ParserFactory;
 use Illuminate\Console\Command;
 use Symfony\Component\Finder\Finder;
 use Tarfinlabs\EventMachine\Actor\Machine;
+use Illuminate\Console\Scheduling\Schedule;
 use Tarfinlabs\EventMachine\Enums\BehaviorType;
 use Tarfinlabs\EventMachine\StateConfigValidator;
 use Tarfinlabs\EventMachine\Behavior\EventBehavior;
 use Tarfinlabs\EventMachine\Support\WiringInspector;
+use Tarfinlabs\EventMachine\Definition\TimerDefinition;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 use Tarfinlabs\EventMachine\Exceptions\MachineDiscoveryException;
 
@@ -141,7 +143,10 @@ class MachineConfigValidatorCommand extends Command
             }
 
             StateConfigValidator::validate($definition->config);
-            $findings = $this->wiringFindings($definition, $machineClass);
+            $findings = [
+                ...$this->wiringFindings($definition, $machineClass),
+                ...$this->timerSweepFindings($definition, $machineClass),
+            ];
         } catch (Throwable $e) {
             $this->error(string: "✗ Error in '{$machineClass}': ".$e->getMessage());
 
@@ -205,6 +210,91 @@ class MachineConfigValidatorCommand extends Command
         }
 
         return $findings;
+    }
+
+    /**
+     * Whether a machine with timers has a sweep scheduled that can actually run.
+     *
+     * Timers fire only from a `machine:process-timers --class=X` sweep, and nothing
+     * schedules one automatically: a timer machine left out of routes/console.php keeps
+     * every instance past its deadline indefinitely, and nothing reports it. A sweep
+     * scheduled with the class unquoted is no better — the scheduler runs it through
+     * /bin/sh, which strips the backslashes, so the sweep fails on every run unseen.
+     *
+     * @param  class-string<Machine>  $machineClass
+     *
+     * @return list<string>
+     */
+    protected function timerSweepFindings(MachineDefinition $definition, string $machineClass): array
+    {
+        if (!$this->hasTimers($definition)) {
+            return [];
+        }
+
+        $quoted = $this->scheduledTimerSweeps()[ltrim($machineClass, '\\')] ?? null;
+
+        if ($quoted === true) {
+            return [];
+        }
+
+        $fix = 'Register it with MachineTimer::register(\\'.$machineClass.'::class) in routes/console.php.';
+
+        if ($quoted === false) {
+            return ["{$machineClass} has a timer sweep scheduled with the class unquoted. The scheduler runs it through /bin/sh, which strips the backslashes, so the sweep never finds the class and its timers never fire. {$fix}"];
+        }
+
+        return ["{$machineClass} has after/every timers but no machine:process-timers sweep is scheduled for it, so its timers never fire. {$fix}"];
+    }
+
+    protected function hasTimers(MachineDefinition $definition): bool
+    {
+        foreach ($definition->idMap as $stateDefinition) {
+            foreach ($stateDefinition->transitionDefinitions ?? [] as $transitionDefinition) {
+                if ($transitionDefinition->timerDefinition instanceof TimerDefinition) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * The machine classes the schedule runs a timer sweep for, mapped to whether the
+     * class reaches the shell quoted.
+     *
+     * Read on every call rather than cached: the schedule is the application's, and a
+     * registration made after this command was constructed must still count.
+     *
+     * @return array<string, bool>
+     */
+    protected function scheduledTimerSweeps(): array
+    {
+        $sweeps = [];
+
+        foreach (resolve(Schedule::class)->events() as $event) {
+            if ($event->command === null || preg_match(
+                '/machine:process-timers\b.*?--class(?:=|\s+)(?:\'([^\']*)\'|"([^"]*)"|(\S+))/',
+                $event->command,
+                $match,
+            ) !== 1) {
+                continue;
+            }
+
+            [$class, $quoted] = match (true) {
+                $match[1] !== ''         => [$match[1], true],
+                ($match[2] ?? '') !== '' => [str_replace('\\\\', '\\', $match[2]), true],
+                // Unquoted is harmless only without a backslash for the shell to strip.
+                default => [$match[3], !str_contains($match[3], '\\')],
+            };
+
+            $class = ltrim($class, '\\');
+
+            // One working registration is enough, whatever else is scheduled for the class.
+            $sweeps[$class] = ($sweeps[$class] ?? false) || $quoted;
+        }
+
+        return $sweeps;
     }
 
     /**
