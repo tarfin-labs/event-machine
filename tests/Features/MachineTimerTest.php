@@ -19,7 +19,35 @@ it('register sets correct command with --class', function (): void {
 
     expect($event->command)
         ->toContain('machine:process-timers')
-        ->toContain('--class='.AfterTimerMachine::class);
+        ->toContain("--class='".AfterTimerMachine::class."'");
+});
+
+it('register shell-escapes a namespaced class name', function (): void {
+    // The scheduler runs this command line through /bin/sh. Unquoted, sh strips the
+    // backslashes and the sweep looks for "AppMachinesFooBarMachine" — and fails unseen.
+    $event = MachineTimer::register('App\\Machines\\Foo\\BarMachine');
+
+    expect($event->command)
+        ->toEndWith("machine:process-timers --class='App\\Machines\\Foo\\BarMachine'")
+        ->and($event->buildCommand())->toContain("--class='App\\Machines\\Foo\\BarMachine'");
+});
+
+it('register gives each machine class its own overlap mutex', function (): void {
+    $first  = MachineTimer::register(AfterTimerMachine::class);
+    $second = MachineTimer::register(TrafficLightsMachine::class);
+    $again  = MachineTimer::register(AfterTimerMachine::class);
+
+    expect($first->mutexName())->not->toBe($second->mutexName())
+        ->and($again->mutexName())->toBe($first->mutexName());
+});
+
+it('register keeps withoutOverlapping and runInBackground after a frequency override', function (): void {
+    $event = MachineTimer::register(AfterTimerMachine::class)->everyFiveMinutes();
+
+    expect($event->expression)->toBe('*/5 * * * *')
+        ->and($event->withoutOverlapping)->toBeTrue()
+        ->and($event->runInBackground)->toBeTrue()
+        ->and($event->command)->toContain("--class='".AfterTimerMachine::class."'");
 });
 
 it('register applies everyMinute as default', function (): void {
