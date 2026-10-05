@@ -27,7 +27,16 @@ Synthesis of `docs/advanced/time-based-events.md`, `docs/best-practices/time-bas
 
 ## Sweep architecture
 
-Timers are **NOT** delayed jobs. A scheduled `php artisan machine:process-timers` (auto-registered, runs every minute by default) sweeps `machine_current_states` for instances past their deadline and dispatches events.
+Timers are **NOT** delayed jobs. A scheduled `php artisan machine:process-timers --class=X` sweeps `machine_current_states` for instances past their deadline and dispatches events.
+
+**The sweep is NOT auto-registered** (auto-discovery was removed in 9.3.0). Every machine with an `after`/`every` timer needs one line in `routes/console.php`:
+
+```php
+MachineTimer::register(OrderMachine::class);                       // everyMinute, withoutOverlapping, runInBackground
+MachineTimer::register(BillingMachine::class)->everyFiveMinutes(); // fluent override
+```
+
+A machine left out is never swept, and at runtime nothing reports it — the timer simply never fires. When adding a timer to a machine, add the registration in the same change; from 9.21.0 `machine:validate` fails a timer machine without a runnable sweep, so `machine:validate --all` in CI catches the omission. Versions 9.3.0–9.20.0 had a second, silent failure: `register()` passed the class unquoted, `/bin/sh` stripped the FQCN's backslashes, and the sweep failed on every run with its output in `/dev/null`. Require 9.21.0+.
 
 Implications:
 - Sub-minute intervals are not supported reliably (sweep granularity)
