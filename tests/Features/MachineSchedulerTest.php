@@ -23,6 +23,16 @@ it('register sets the correct command with class and event options', function ()
         ->toContain("--event='CHECK_EXPIRY'");
 });
 
+it('register shell-escapes the namespaced class name', function (): void {
+    // Locks in the array form: a string command line would reach /bin/sh unquoted
+    // and lose the backslashes of the FQCN, as MachineTimer::register() once did.
+    $event = MachineScheduler::register(ScheduledMachine::class, 'CHECK_EXPIRY');
+
+    expect($event->command)
+        ->toEndWith("machine:process-scheduled --class='".ScheduledMachine::class."' --event='CHECK_EXPIRY'")
+        ->and($event->buildCommand())->toContain("--class='".ScheduledMachine::class."'");
+});
+
 it('register supports fluent chaining with dailyAt', function (): void {
     $event = MachineScheduler::register(ScheduledMachine::class, 'CHECK_EXPIRY')
         ->dailyAt('00:10');
