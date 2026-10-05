@@ -22,8 +22,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### Artisan Commands
 - `php artisan machine:xstate` - Export machine definition to XState v5 JSON for Stately Studio
 - `php artisan machine:validate` - Validate machine configuration
-- `php artisan machine:process-timers` - Sweep command for after/every timers (auto-registered)
-- `php artisan machine:process-scheduled` - Process scheduled events (called by MachineScheduler)
+- `php artisan machine:process-timers` - Sweep command for after/every timers (NOT auto-registered — schedule per class with `MachineTimer::register()` in `routes/console.php`; unregistered machines are never swept)
+- `php artisan machine:process-scheduled` - Process scheduled events (scheduled per event with `MachineScheduler::register()`)
 - `php artisan machine:timer-status` - Display timer status for machine instances
 - `php artisan machine:paths` - Enumerate all paths through a machine definition (static analysis)
 - `php artisan machine:coverage` - Report path coverage for a machine (reads test coverage JSON)
