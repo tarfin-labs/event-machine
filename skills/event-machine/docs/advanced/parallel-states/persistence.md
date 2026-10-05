@@ -1,0 +1,239 @@
+# Parallel State Persistence
+
+How parallel states are stored in the database and restored.
+
+**Related pages:**
+- [Parallel States Overview](./index) - Basic concepts and syntax
+- [Event Handling](./event-handling) - Events, entry/exit actions, `@done`
+- [Parallel Dispatch](./parallel-dispatch) - Concurrent execution via queue jobs
+- [Persistence](/laravel-integration/persistence) - General persistence documentation
+
+## Database Storage
+
+Parallel state values are automatically persisted to the database. The `machine_value` column stores the array of active state IDs as JSON:
+
+<!-- doctest-attr: ignore -->
+```php
+// State is persisted with all active regions
+$machine = OrderWorkflowMachine::create();
+$machine->send(['type' => 'START']);
+
+// Get the root event ID for later restoration
+$rootEventId = $machine->state->history->first()->root_event_id;
+
+// Later, restore from database using the root event ID
+$machine = OrderWorkflowMachine::create(state: $rootEventId);
+$state = $machine->state;
+
+// All parallel regions are restored
+$state->matches('processing.payment.pending');   // true
+$state->matches('processing.shipping.preparing'); // true
+```
+
+## JSON Structure
+
+The persisted state value is stored as a JSON array of fully-qualified state IDs:
+
+```json
+{
+  "machine_value": [
+    "order_fulfillment.processing.payment.validating",
+    "order_fulfillment.processing.shipping.picking",
+    "order_fulfillment.processing.documents.generating"
+  ]
+}
+```
+
+When restored, EventMachine reconstructs the parallel state by:
+1. Parsing the JSON array of state IDs
+2. Validating each state path exists in the machine definition
+3. Rebuilding the state tree with all active leaf states
+
+## Context Persistence
+
+Context changes within parallel states are persisted incrementally. Each event stores only the context delta (what changed), not the full context:
+
+<!-- doctest-attr: ignore -->
+```php
+// Event 1: Payment succeeds
+$machine->send([
+    'type' => 'PAYMENT_SUCCEEDED',
+    'payload' => ['paymentId' => 'pay_123'],
+]);
+// Persists: {"paymentId": "pay_123"}
+
+// Event 2: Shipping progresses
+$machine->send(['type' => 'PICKED']);
+// Persists: {} (no context change)
+
+// Event 3: Shipping complete with tracking
+$machine->send([
+    'type' => 'SHIPPED',
+    'payload' => ['tracking_number' => '1Z999...'],
+]);
+// Persists: {"tracking_number": "1Z999..."}
+```
+
+## Restoration Patterns
+
+### Full Machine Restoration
+
+Restore a machine to its exact state from any point:
+
+<!-- doctest-attr: ignore -->
+```php
+use Tarfinlabs\EventMachine\Actor\Machine;
+
+// Get the root event ID when creating the machine
+$machine = OrderFulfillmentMachine::create();
+$rootEventId = $machine->state->history->first()->root_event_id;
+
+// Store root_event_id in your domain model
+$order->update(['machine_root_event_id' => $rootEventId]);
+
+// Later, restore the machine
+$machine = OrderFulfillmentMachine::create(state: $order->machine_root_event_id);
+
+// All regions are restored to their exact states
+$machine->state->matches('processing.payment.charged');
+$machine->state->matches('processing.shipping.packing');
+$machine->state->context->paymentId;  // 'pay_123'
+```
+
+### Using `MachineCast` with Eloquent
+
+For automatic persistence with Eloquent models:
+
+<!-- doctest-attr: ignore -->
+```php
+use Tarfinlabs\EventMachine\Casts\MachineCast;
+
+class Order extends Model
+{
+    protected $casts = [
+        'fulfillment_state' => MachineCast::class . ':' . OrderFulfillmentMachine::class,
+    ];
+}
+
+// The cast handles root_event_id storage automatically
+$order = Order::create(['customer_id' => 123]);
+$order->fulfillment_state->send(['type' => 'PAYMENT_SUCCEEDED', 'payload' => ['paymentId' => 'pay_123']]);
+$order->save();
+
+// Later retrieval restores the full parallel state
+$order = Order::find(1);
+$order->fulfillment_state->state->matches('processing.payment.charged');  // true
+```
+
+## Querying Machines by State
+
+Find machines in specific parallel state combinations:
+
+<!-- doctest-attr: ignore -->
+```php
+use Tarfinlabs\EventMachine\Models\MachineEvent;
+
+// Find all orders where payment is charged but shipping is still picking
+$events = MachineEvent::query()
+    ->where('machine_id', 'order_fulfillment')
+    ->whereJsonContains('machine_value', 'order_fulfillment.processing.payment.charged')
+    ->whereJsonContains('machine_value', 'order_fulfillment.processing.shipping.picking')
+    ->latest()
+    ->get()
+    ->unique('root_event_id');
+```
+
+## Cross-Region State Queries
+
+Query for specific combinations across regions:
+
+<!-- doctest-attr: ignore -->
+```php
+// Orders ready to ship (payment charged, docs ready, shipping packed)
+$ready_to_ship = MachineEvent::query()
+    ->where('machine_id', 'order_fulfillment')
+    ->whereJsonContains('machine_value', 'order_fulfillment.processing.payment.charged')
+    ->whereJsonContains('machine_value', 'order_fulfillment.processing.documents.ready')
+    ->whereJsonContains('machine_value', 'order_fulfillment.processing.shipping.ready_to_ship')
+    ->latest()
+    ->get()
+    ->unique('root_event_id');
+```
+
+## Handling Large Parallel State Trees
+
+For machines with many parallel regions, consider:
+
+### Index Optimization
+
+```sql
+-- Index for state value searches
+CREATE INDEX idx_machine_events_value
+ON machine_events ((machine_value::jsonb));
+
+-- Partial index for specific machine types
+CREATE INDEX idx_order_fulfillment_states
+ON machine_events ((machine_value::jsonb))
+WHERE machine_id = 'order_fulfillment';
+```
+
+### State Summarization
+
+For complex parallel structures, store summary flags in context:
+
+<!-- doctest-attr: ignore -->
+```php
+'actions' => [
+    'markPaymentCompleteAction' => function (ContextManager $ctx): void {
+        $ctx->set('paymentComplete', true);
+    },
+    'markShippingCompleteAction' => function (ContextManager $ctx): void {
+        $ctx->set('shippingComplete', true);
+    },
+],
+```
+
+Then query by context instead of state value:
+
+<!-- doctest-attr: ignore -->
+```php
+MachineEvent::query()
+    ->where('machine_id', 'order_fulfillment')
+    ->whereJsonContains('context', ['paymentComplete' => true])
+    ->whereJsonContains('context', ['shippingComplete' => false])
+    ->get();
+```
+
+## Machine Locks Table
+
+When [Parallel Dispatch](./parallel-dispatch) is enabled, concurrent queue jobs coordinate through a dedicated `machine_locks` database table. Publish the migration:
+
+```bash
+php artisan vendor:publish --tag=event-machine-migrations
+php artisan migrate
+```
+
+The `machine_locks` table stores:
+- **`key`** — Unique lock identifier (machine root event ID)
+- **`owner`** — Current lock holder (job UUID)
+- **`expiration`** — TTL-based stale lock cleanup
+
+You can query this table directly for debugging:
+
+```sql
+SELECT * FROM machine_locks WHERE key LIKE 'mre:%';
+```
+
+Stale locks (from crashed workers) are automatically cleaned up when a new lock request detects an expired `expiration` timestamp.
+
+## Archival Considerations
+
+When archiving parallel state machines, all regions are compressed together. See [Archival](/laravel-integration/archival) for details on:
+
+- Compression levels for parallel state data
+- Restoration of archived parallel states
+- Auto-restore behavior when new events arrive
+
+::: tip Testing
+For testing parallel state persistence, see [Persistence Testing](/testing/persistence-testing).
+:::
