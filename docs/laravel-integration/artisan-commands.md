@@ -263,32 +263,37 @@ Maps states, transitions, guards, actions, and delegation (`machine` key → XSt
 
 ## machine:process-timers
 
-Sweep command for time-based events (`after`/`every` on transitions). Auto-registered via `MachineServiceProvider` — runs on schedule, no manual setup needed.
+Sweep command for time-based events (`after`/`every` on transitions). **Not auto-registered**: schedule it once per timer machine with `MachineTimer::register()` in `routes/console.php`. A machine without that line is never swept. See [Registration](/advanced/time-based-events#registration).
 
 ### Usage
 
 ```bash
-# Process timers for a specific machine class
+# Process timers for a specific machine class (--class is required)
 php artisan machine:process-timers --class="App\Machines\OrderMachine"
 ```
 
+Quote the class on the command line: an unquoted `\` is stripped by the shell. `MachineTimer::register()` escapes it for you (from 9.21.0).
+
 ### How It Works
 
-1. Discovers machine classes with timer-configured transitions
+1. Loads the definition of the `--class` machine and collects its timer-configured transitions
 2. Queries `machine_current_states` for instances past deadline
 3. Inserts `machine_timer_fires` records (atomic dedup via `insertOrIgnore`)
 4. Dispatches `SendToMachineJob` via `Bus::batch`
+
+Exits `1` when `--class` is missing or the definition cannot be built.
 
 ### Configuration
 
 ```php ignore
 // config/machine.php
 'timers' => [
-    'resolution'              => 'everyMinute',
     'batch_size'              => 100,
     'backpressure_threshold'  => 10000,
 ],
 ```
+
+Sweep frequency is set per machine on the `MachineTimer::register()` call (default `everyMinute`).
 
 ## machine:process-scheduled
 
