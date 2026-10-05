@@ -83,8 +83,8 @@ return [
     |--------------------------------------------------------------------------
     |
     | These settings control how time-based events (`after` and `every` keys
-    | on transitions) are processed. The sweep command runs at the configured
-    | resolution and checks all machine instances for due timers.
+    | on transitions) are processed. The sweep runs per machine class at the
+    | frequency given to MachineTimer::register() in routes/console.php.
     |
     */
     'timers' => [
