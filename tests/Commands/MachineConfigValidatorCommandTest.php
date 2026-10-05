@@ -5,12 +5,19 @@ declare(strict_types=1);
 namespace Tarfinlabs\EventMachine\Tests\Commands;
 
 use Illuminate\Contracts\Console\Kernel;
+use Illuminate\Console\Scheduling\Schedule;
 use Symfony\Component\Console\Command\Command;
+use Tarfinlabs\EventMachine\Scheduling\MachineTimer;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\AbcMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\Xyz\XyzMachine;
 use Tarfinlabs\EventMachine\Commands\MachineConfigValidatorCommand;
 use Tarfinlabs\EventMachine\Fixtures\InvalidMachines\MiswiredContextMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TimerMachines\AfterTimerMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TimerMachines\EveryTimerMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TimerMachines\EveryWithMaxMachine;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\TrafficLights\TrafficLightsMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\LoopMachines\AlwaysLoopOnTimerMachine;
+use Tarfinlabs\EventMachine\Tests\Stubs\Machines\BehaviorCoverage\BehaviorCoverageMachine;
 
 it('test it validates machine with valid config', function (): void {
     $this
@@ -48,6 +55,18 @@ it('test it reports a machine identically whether named or swept', function (): 
         ->artisan('machine:validate', ['machine' => [class_basename(AbcMachine::class)]])
         ->expectsOutput($line)
         ->assertExitCode(Command::SUCCESS);
+
+    // Every discoverable stub with timers gets its sweep, as an application's routes/console.php
+    // would give it; without one, the sweep below rightly fails those machines.
+    foreach ([
+        AfterTimerMachine::class,
+        EveryTimerMachine::class,
+        EveryWithMaxMachine::class,
+        AlwaysLoopOnTimerMachine::class,
+        BehaviorCoverageMachine::class,
+    ] as $timerMachine) {
+        MachineTimer::register($timerMachine);
+    }
 
     // The only full sweep in this file. A sweep builds every discoverable machine
     // definition and reflects over every behavior, so it is by far the most expensive
@@ -110,4 +129,76 @@ it('test it suppresses the success line for a machine with findings', function (
         ->artisan('machine:validate', ['machine' => [MiswiredContextMachine::class]])
         ->doesntExpectOutputToContain("✓ Machine '".MiswiredContextMachine::class."' configuration is valid.")
         ->assertExitCode(Command::FAILURE);
+});
+
+it('test it fails a timer machine whose sweep is not scheduled', function (): void {
+    // The TractorSalesMachine case: a 7-day timer that never fired because nothing
+    // registered its sweep, and nothing said so.
+    $this
+        ->artisan('machine:validate', ['machine' => [AfterTimerMachine::class]])
+        // One expectation: the finding is a single line, and each expectation consumes the line it matches.
+        ->expectsOutputToContain('has after/every timers but no machine:process-timers sweep is scheduled for it, so its timers never fire. Register it with MachineTimer::register(\\'.AfterTimerMachine::class.'::class)')
+        ->doesntExpectOutputToContain("✓ Machine '".AfterTimerMachine::class."' configuration is valid.")
+        ->assertExitCode(Command::FAILURE);
+});
+
+it('test it passes a timer machine registered with MachineTimer::register', function (): void {
+    MachineTimer::register(AfterTimerMachine::class)->everyFiveMinutes();
+
+    $this
+        ->artisan('machine:validate', ['machine' => [AfterTimerMachine::class]])
+        ->expectsOutput("✓ Machine '".AfterTimerMachine::class."' configuration is valid.")
+        ->assertExitCode(Command::SUCCESS);
+});
+
+it('test it fails a timer sweep scheduled with the class unquoted', function (): void {
+    // What MachineTimer::register() itself scheduled from 9.3.0 to 9.20.0: /bin/sh strips
+    // the backslashes, so the sweep is registered and still never runs.
+    resolve(Schedule::class)->command('machine:process-timers --class='.AfterTimerMachine::class);
+
+    $this
+        ->artisan('machine:validate', ['machine' => [AfterTimerMachine::class]])
+        ->expectsOutputToContain('has a timer sweep scheduled with the class unquoted')
+        ->assertExitCode(Command::FAILURE);
+});
+
+it('test it accepts a timer sweep scheduled by hand with the class quoted', function (string $commandLine): void {
+    resolve(Schedule::class)->command($commandLine);
+
+    $this
+        ->artisan('machine:validate', ['machine' => [AfterTimerMachine::class]])
+        ->expectsOutput("✓ Machine '".AfterTimerMachine::class."' configuration is valid.")
+        ->assertExitCode(Command::SUCCESS);
+})->with([
+    'single quotes'   => ["machine:process-timers --class='".AfterTimerMachine::class."'"],
+    'double quotes'   => ['machine:process-timers --class="'.AfterTimerMachine::class.'"'],
+    'space separator' => ["machine:process-timers --class '".AfterTimerMachine::class."'"],
+]);
+
+it('test it passes a timer machine once any of its sweeps can run', function (): void {
+    resolve(Schedule::class)->command('machine:process-timers --class='.AfterTimerMachine::class);
+    MachineTimer::register(AfterTimerMachine::class);
+
+    $this
+        ->artisan('machine:validate', ['machine' => [AfterTimerMachine::class]])
+        ->expectsOutput("✓ Machine '".AfterTimerMachine::class."' configuration is valid.")
+        ->assertExitCode(Command::SUCCESS);
+});
+
+it('test it does not count a sweep scheduled for another machine', function (): void {
+    MachineTimer::register(EveryTimerMachine::class);
+
+    $this
+        ->artisan('machine:validate', ['machine' => [AfterTimerMachine::class]])
+        ->expectsOutputToContain('no machine:process-timers sweep is scheduled for it')
+        ->assertExitCode(Command::FAILURE);
+});
+
+it('test it does not require a sweep for a machine without timers', function (): void {
+    expect(resolve(Schedule::class)->events())->toBe([]);
+
+    $this
+        ->artisan('machine:validate', ['machine' => [TrafficLightsMachine::class]])
+        ->expectsOutput("✓ Machine '".TrafficLightsMachine::class."' configuration is valid.")
+        ->assertExitCode(Command::SUCCESS);
 });

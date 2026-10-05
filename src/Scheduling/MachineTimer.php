@@ -32,7 +32,10 @@ class MachineTimer
         /** @var Schedule $schedule */
         $schedule = resolve(Schedule::class);
 
-        return $schedule->command("machine:process-timers --class={$machineClass}")
+        // Parameters as an array, never interpolated: the scheduler runs this command line
+        // through /bin/sh, and only the array form is escaped. Unquoted, sh strips the
+        // backslashes of a namespaced FQCN and the sweep fails on a class that does not exist.
+        return $schedule->command('machine:process-timers', ['--class' => $machineClass])
             ->everyMinute()
             ->withoutOverlapping()
             ->runInBackground();

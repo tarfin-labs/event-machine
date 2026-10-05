@@ -33,6 +33,48 @@ Each section below has step-by-step migration instructions with before/after exa
 
 ---
 
+## From 9.20.0 to 9.21.0
+
+### Timer sweeps registered with `MachineTimer::register()` start running
+
+**If you register timers, read this before deploying.** From 9.3.0 through 9.20.0,
+`MachineTimer::register()` scheduled `machine:process-timers --class=App\Machines\OrderMachine`
+with the class unquoted. The scheduler hands that line to `/bin/sh`, which strips the backslashes,
+so every run failed with `Class "AppMachinesOrderMachine" not found`. The scheduler sends output to
+`/dev/null`, and the command exited `0` until 9.19.0, so nothing showed it. Running the command by
+hand with the class quoted works, which is why it looked healthy when checked. `MachineScheduler`
+was never affected: it already passed its parameters as an array, which the scheduler escapes.
+
+9.21.0 passes `--class` as an array parameter too. No code change is needed on your side.
+
+**What happens on the first sweeps after deploying:**
+
+- Every `after` timer whose deadline passed while the sweep was broken fires now, however long ago
+  that was. An instance that should have expired in May expires on deploy day. Each sweep fires at
+  most `timers.batch_size` (default 100) instances per timer, so a large backlog drains over several
+  minutes rather than in one burst.
+- An overdue `every` timer fires **once**, not once per missed interval, and its interval restarts
+  from that fire. A `max`/`then` count starts from that first fire.
+
+**Before deploying,** look at the backlog and decide whether those events should still fire:
+`machine_timer_fires` being empty for a machine whose instances sit in timer states past their
+deadline is the signature of this bug. `machine:timer-status` lists the instances per state. If an
+old deadline should no longer act, move those instances out of the timer state (or mark the fire as
+done) before the new version's first sweep.
+
+### `machine:validate` fails a timer machine without a runnable sweep
+
+**Breaking change for a CI step running `machine:validate`.** Auto-discovery was removed in 9.3.0,
+and a machine with `after`/`every` timers but no `machine:process-timers` sweep in the schedule is
+never swept — as silently as the bug above. `machine:validate` now reports it as a finding and exits
+`1`. It also fails a sweep scheduled by hand with the class unquoted, which never runs for the same
+reason as above.
+
+**What can newly fail:** every timer machine your `routes/console.php` does not register. Each
+finding names the line to add: `MachineTimer::register(\App\Machines\OrderMachine::class)`. A sweep
+you schedule some other way passes as long as its command quotes `--class`. The check reads the
+schedule of the application it runs in, so run it through artisan, not from a bare script.
+
 ## From 9.19.x to 9.20.0
 
 Scenario path resolution is now weighted. Everything here is confined to `machine:scenario`,

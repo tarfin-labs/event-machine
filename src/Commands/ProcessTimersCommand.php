@@ -21,7 +21,9 @@ use Tarfinlabs\EventMachine\Definition\MachineDefinition;
 /**
  * Sweep command that processes time-based events (after/every on transitions).
  *
- * Runs on a schedule (default: every minute) via MachineServiceProvider.
+ * Scheduled per machine class with MachineTimer::register() in routes/console.php
+ * (default: every minute). Nothing registers it automatically: a machine with timers
+ * but no registration is never swept.
  * Finds machine instances in states with timer-configured transitions,
  * checks timing conditions, and dispatches SendToMachineJob for eligible instances.
  */
@@ -45,7 +47,7 @@ class ProcessTimersCommand extends Command
         $batchSize    = (int) config('machine.timers.batch_size', 100);
 
         if ($machineClass === '') {
-            $this->warn('No --class specified. Use MachineServiceProvider auto-registration for per-class sharding.');
+            $this->warn('No --class specified. Register each timer machine with MachineTimer::register(YourMachine::class) in routes/console.php.');
 
             return self::FAILURE;
         }

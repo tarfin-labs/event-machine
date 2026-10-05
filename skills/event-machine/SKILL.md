@@ -477,14 +477,14 @@ Full reference: `docs/laravel-integration/reads.md`.
 
 | Command | Purpose | When to use |
 |---------|---------|-------------|
-| `machine:validate --all` | Validate machine config **and wiring** | After editing a machine definition. Exits non-zero on failure, so it gates CI. Checks behavior-to-context compatibility, `$requiredContext` keys, and event-type collisions |
+| `machine:validate --all` | Validate machine config **and wiring** | After editing a machine definition. Exits non-zero on failure, so it gates CI. Checks behavior-to-context compatibility, `$requiredContext` keys, event-type collisions, and (9.21.0+) that every machine with `after`/`every` timers has a runnable `machine:process-timers` sweep in the schedule |
 | `machine:paths` | Enumerate all paths (static analysis) | After writing a scenario — confirm override states are on reachable paths |
 | `machine:scenario-validate` | Validate scenario structure | After every scenario file change — catches source/event/target mismatches. Exits non-zero on a finding, so it gates CI. Also **names and fails on scenario files it could not load** — a class that does not resolve under the name its path implies, or one that throws while constructing; before 9.18.0 those silently left the list and the run still passed. `--max-iterations=N` raises the search budget behind each scenario's reachability check |
 | `machine:scenario` | Scaffold a new scenario | Starting a new scenario — generates plan from path analysis. Multiple routes are listed **cheapest first** with a `weight` on each stats line. `--max-iterations=N` raises the search budget, which is now one budget for the whole resolution rather than one per trigger branch; a truncated search reports itself as such, which is **not** the same finding as "no path" |
 | `machine:coverage` | Path coverage report | Before adding transitions — verify no dead paths created. `--max-paths`/`--max-depth` raise the enumeration ceilings; `--min` refuses to pass judgement over a truncated analysis |
 | `machine:xstate` | Export to XState v5 JSON (Stately Studio) | For team discussion — visualize state topology |
-| `machine:process-timers` | Sweep due `after`/`every` timers | Auto-registered — runs on schedule |
-| `machine:process-scheduled` | Fire scheduled events | Auto-registered — runs on schedule |
+| `machine:process-timers` | Sweep due `after`/`every` timers | **Not auto-registered.** One `MachineTimer::register(YourMachine::class)` per timer machine in `routes/console.php`; a machine left out is never swept (from 9.21.0 `machine:validate` fails it). Before 9.21.0 the registered sweep failed in production for every namespaced class (shell stripped the FQCN's backslashes) — upgrade |
+| `machine:process-scheduled` | Fire scheduled events | **Not auto-registered.** One `MachineScheduler::register(YourMachine::class, 'EVENT')` per scheduled event in `routes/console.php`; an unregistered schedule never fires |
 | `machine:timer-status` | Show timer state per instance | Debugging timer issues — check fire counts and next-fire times |
 | `machine:archive-events` | Archive old events (`--dry-run`, `--sync`) | Maintenance — reduce `machine_events` table size |
 | `machine:archive-status` | Archive stats; `--restore=<rootEventId>` | After archiving — verify or restore specific machines |

@@ -176,6 +176,14 @@ MachineTimer::register(BillingMachine::class)
 
 `register()` returns Laravel's `SchedulingEvent` for full fluent chaining (`->withoutOverlapping()` and `->runInBackground()` are applied by default).
 
+::: warning Nothing registers the sweep for you
+Auto-discovery was removed in 9.3.0. A machine with `after`/`every` timers but no `MachineTimer::register()` line is never swept, and nothing reports it: instances sit past their deadline indefinitely. Add the registration in the same change that adds a timer. From 9.21.0, `machine:validate` fails a machine whose timers have no runnable sweep, so a CI step running `machine:validate --all` catches the omission.
+:::
+
+::: danger 9.3.0 – 9.20.0: registered sweeps never ran from the scheduler
+`register()` put the class name on the command line unquoted. The scheduler runs that line through `/bin/sh`, which strips the backslashes of a namespaced class, so every scheduled sweep failed with `Class "AppMachinesOrderMachine" not found` — into `/dev/null`, where nobody saw it. Running the command by hand worked, which hid it further. Fixed in 9.21.0; see the [upgrade note](/getting-started/upgrading#from-9-20-0-to-9-21-0) for what the first sweep after upgrading does.
+:::
+
 ### How It Works
 
 1. You register each timer machine in `routes/console.php` via `MachineTimer::register()`

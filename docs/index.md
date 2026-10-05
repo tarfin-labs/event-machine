@@ -348,7 +348,7 @@ OrderMachine::test(['amount' => 0])
 
 ## Time-Based Events
 
-**Declarative timers on transitions.** Define `after` (one-shot) and `every` (recurring) timers directly in your machine config. Auto-discovered, auto-scheduled — no Kernel.php setup needed.
+**Declarative timers on transitions.** Define `after` (one-shot) and `every` (recurring) timers directly in your machine config, and schedule each machine's sweep with one `MachineTimer::register()` line in `routes/console.php`.
 
 [Time-Based Events &rarr;](/advanced/time-based-events)
 
