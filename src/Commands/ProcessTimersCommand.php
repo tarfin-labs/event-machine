@@ -47,7 +47,7 @@ class ProcessTimersCommand extends Command
         $batchSize    = (int) config('machine.timers.batch_size', 100);
 
         if ($machineClass === '') {
-            $this->warn('No --class specified. Use MachineServiceProvider auto-registration for per-class sharding.');
+            $this->warn('No --class specified. Register each timer machine with MachineTimer::register(YourMachine::class) in routes/console.php.');
 
             return self::FAILURE;
         }
