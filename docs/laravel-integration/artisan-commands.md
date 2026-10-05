@@ -56,6 +56,7 @@ php artisan machine:validate --all
 - **Behavior-to-context compatibility.** A behavior whose `__invoke()` type-hints a context the machine does not declare would raise a `TypeError` the first time its transition fires — possibly a rare branch, weeks after deploy. This reports it before the branch is ever taken.
 - **`$requiredContext` keys.** A key the machine's declared context class cannot supply is reported. The check errs toward silence: a key that might be satisfiable at runtime is left alone, because a false failure in a CI gate is worse than a missed one.
 - **Event-type collisions.** Two event classes deriving the same type collapse to one entry in the machine's event registry, and that registry is what reconstructs persisted events — so payload validation can come from the wrong class. The finding names the class that currently owns the type.
+- **Timer sweep registration** (9.21.0+). A machine with `after`/`every` timers fails when the schedule has no `machine:process-timers` sweep for its class, because nothing else would ever fire those timers. A sweep scheduled with the class unquoted also fails: the scheduler runs it through `/bin/sh`, which strips the backslashes, so it never finds the class. `MachineTimer::register()` satisfies the check; so does any hand-written schedule entry whose `--class` is quoted. The check reads the application's schedule, so run it through artisan, where `routes/console.php` is loaded.
 
 ### Exit Codes
 
