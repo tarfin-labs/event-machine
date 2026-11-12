@@ -429,7 +429,7 @@ class Machine implements Castable, JsonSerializable, Stringable
 
             $shouldDispatch = true;
         } finally {
-            if ($acquiredLock && $rootEventId !== null) {
+            if ($acquiredLock) {
                 $lockHandle->release();
             }
 
