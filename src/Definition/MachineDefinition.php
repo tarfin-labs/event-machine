@@ -3282,7 +3282,7 @@ class MachineDefinition
         if ($eventBehavior->type !== TransitionProperty::Always->value) {
             $state->triggeringEvent = $eventBehavior;
             $state->setCurrentEventBehavior($eventBehavior);
-        } elseif ($state->triggeringEvent !== null) {
+        } elseif ($state->triggeringEvent instanceof EventBehavior) {
             $state->setCurrentEventBehavior($state->triggeringEvent);
         } else {
             $state->setCurrentEventBehavior($eventBehavior);
@@ -3410,7 +3410,7 @@ class MachineDefinition
         }
 
         // Centralized entry protocol (or just state enter event + transition listeners for targetless)
-        if ($targetStateDefinition !== null) {
+        if ($targetStateDefinition instanceof StateDefinition) {
             // processPostEntry: false — transition() has its own @always/event queue handling below
             $this->enterState($newState, $targetStateDefinition, $eventBehavior, fireTransitionListeners: true, processPostEntry: false);
         } else {

@@ -14,6 +14,7 @@ use Tarfinlabs\EventMachine\Behavior\ActionBehavior;
 use Tarfinlabs\EventMachine\Behavior\OutputBehavior;
 use Tarfinlabs\EventMachine\Enums\StateDefinitionType;
 use Tarfinlabs\EventMachine\Behavior\InvokableBehavior;
+use Tarfinlabs\EventMachine\Definition\StateDefinition;
 use Tarfinlabs\EventMachine\Models\MachineCurrentState;
 use Tarfinlabs\EventMachine\Testing\InlineBehaviorFake;
 use Tarfinlabs\EventMachine\Definition\MachineDefinition;
@@ -1139,7 +1140,7 @@ class ScenarioPlayer
         $state           = $machine->state;
         $stateDefinition = $state->currentStateDefinition;
 
-        if ($stateDefinition === null) {
+        if (!$stateDefinition instanceof StateDefinition) {
             return 'Hint: add a context override in the plan() for the relevant state.';
         }
 
