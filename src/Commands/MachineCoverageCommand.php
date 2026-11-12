@@ -223,8 +223,8 @@ class MachineCoverageCommand extends Command
             $this->line('');
             $this->line('UNTESTED: '.count($uncovered).' path'.(count($uncovered) !== 1 ? 's' : ''));
 
-            foreach ($uncovered as $path) {
-                foreach ($path->steps as $step) {
+            foreach ($uncovered as $untestedPath) {
+                foreach ($untestedPath->steps as $step) {
                     $line = '  → ';
 
                     if ($step->event !== null) {
