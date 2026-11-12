@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Artisan;
 use Symfony\Component\Console\Command\Command;
 
@@ -67,7 +68,7 @@ function removeScenarioWriteProbe(string $dir): void
     );
 
     foreach ($items as $item) {
-        $item->isDir() ? rmdir($item->getPathname()) : unlink($item->getPathname());
+        $item->isDir() ? rmdir($item->getPathname()) : File::delete($item->getPathname());
     }
 
     rmdir($dir);

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\File;
 use Tarfinlabs\EventMachine\Testing\TracksPathCoverage;
 use Tarfinlabs\EventMachine\Analysis\PathCoverageTracker;
 use Tarfinlabs\EventMachine\Testing\InteractsWithMachines;
@@ -78,7 +79,7 @@ test('export and import roundtrip preserves data', function (): void {
     expect($paths)->toHaveCount(1)
         ->and($paths[0]['signature'])->toBe('idle→done');
 
-    unlink($tmpFile);
+    File::delete($tmpFile);
 });
 
 test('exportToDirectory writes PID-suffixed file', function (): void {
@@ -99,7 +100,7 @@ test('exportToDirectory writes PID-suffixed file', function (): void {
     expect($data)->toHaveKey('App\\Machine');
 
     // Cleanup
-    unlink($file);
+    File::delete($file);
     rmdir($tmpDir);
 });
 
@@ -137,8 +138,8 @@ test('importFromDirectory merges multiple worker files', function (): void {
     expect($pathsB)->toHaveCount(1);
 
     // Cleanup
-    unlink($tmpDir.'/coverage_1001.json');
-    unlink($tmpDir.'/coverage_1002.json');
+    File::delete($tmpDir.'/coverage_1001.json');
+    File::delete($tmpDir.'/coverage_1002.json');
     rmdir($tmpDir);
 });
 

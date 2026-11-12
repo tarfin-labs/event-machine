@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\File;
 use Tarfinlabs\EventMachine\Tests\Stubs\Machines\ScenarioStubs\ScenarioTestMachine;
 
 /**
@@ -51,7 +52,7 @@ afterEach(function (): void {
         );
 
         foreach ($entries as $entry) {
-            $entry->isDir() ? rmdir($entry->getPathname()) : unlink($entry->getPathname());
+            $entry->isDir() ? rmdir($entry->getPathname()) : File::delete($entry->getPathname());
         }
 
         rmdir($dir);

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Artisan;
 use Tarfinlabs\EventMachine\Scenarios\ScenarioDiscovery;
 use Tarfinlabs\EventMachine\Fixtures\BrokenScenarios\BrokenScenarioMachine;
@@ -103,8 +104,8 @@ beforeEach(function (): void {
 afterEach(function (): void {
     $dir = brokenScenarioDir();
 
-    @unlink($dir.'/ThrowsOnConstructScenario.php');
-    @unlink($dir.'/MismatchedNamespaceScenario.php');
+    File::delete($dir.'/ThrowsOnConstructScenario.php');
+    File::delete($dir.'/MismatchedNamespaceScenario.php');
 
     ScenarioDiscovery::resetCache();
 });

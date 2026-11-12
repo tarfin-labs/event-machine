@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Artisan;
 use Tarfinlabs\EventMachine\ContextManager;
 use Tarfinlabs\EventMachine\Fixtures\InvalidMachines\UndefinedMachine;
@@ -119,7 +120,7 @@ test('an unreadable file fails cleanly', function (string $command): void {
             ->and(Artisan::output())->toContain('not readable');
     } finally {
         chmod($path, 0o644);
-        @unlink($path);
+        File::delete($path);
     }
 })->with($fileCommands)->skip(
     posix_geteuid() === 0,
@@ -139,7 +140,7 @@ test('a file that cannot be parsed fails cleanly', function (string $command): v
         expect($exit)->toBe(Command::FAILURE)
             ->and(Artisan::output())->toContain('failed');
     } finally {
-        @unlink($path);
+        File::delete($path);
     }
 })->with($fileCommands);
 
@@ -160,7 +161,7 @@ test('a file that throws while loading fails cleanly', function (string $command
         expect($exit)->toBe(Command::FAILURE)
             ->and(Artisan::output())->toContain('load-time boom');
     } finally {
-        @unlink($path);
+        File::delete($path);
     }
 })->with($fileCommands);
 

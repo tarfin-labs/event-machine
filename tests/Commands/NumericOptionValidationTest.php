@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Artisan;
 use Symfony\Component\Console\Command\Command;
 use Tarfinlabs\EventMachine\Analysis\PathCoverageTracker;
@@ -73,7 +74,7 @@ test('machine:coverage validates its ceilings before reporting anything', functi
             // The figure must not be printed alongside the rejection.
             ->and($result['output'])->not->toContain('Coverage:');
     } finally {
-        @unlink($from);
+        File::delete($from);
         PathCoverageTracker::reset();
     }
 });

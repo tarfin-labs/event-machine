@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\File;
 use Tarfinlabs\EventMachine\Commands\MachineScenarioValidateCommand;
 
 /**
@@ -69,7 +70,7 @@ afterEach(function (): void {
         new RecursiveDirectoryIterator($dir, FilesystemIterator::SKIP_DOTS),
         RecursiveIteratorIterator::CHILD_FIRST,
     ) as $entry) {
-        $entry->isDir() ? rmdir($entry->getPathname()) : unlink($entry->getPathname());
+        $entry->isDir() ? rmdir($entry->getPathname()) : File::delete($entry->getPathname());
     }
 
     rmdir($dir);

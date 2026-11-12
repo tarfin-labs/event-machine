@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Artisan;
 use Symfony\Component\Console\Command\Command;
 use Tarfinlabs\EventMachine\Analysis\PathCoverageTracker;
@@ -44,7 +45,7 @@ function invokeCoverage(string $machine, array $options): array
 
         return ['code' => $code, 'output' => Artisan::output()];
     } finally {
-        @unlink($from);
+        File::delete($from);
     }
 }
 
@@ -186,7 +187,7 @@ test('the imported observations are dropped even when the command fails', functi
         expect($exit)->toBe(Command::FAILURE)
             ->and(PathCoverageTracker::observedPaths(ReentrantParallelMachine::class))->toBe([]);
     } finally {
-        @unlink($from);
+        File::delete($from);
         PathCoverageTracker::reset();
     }
 });
