@@ -13,6 +13,7 @@ use Rector\Php81\Rector\Array_\ArrayToFirstClassCallableRector;
 use Rector\TypeDeclaration\Rector\Closure\ClosureReturnTypeRector;
 use RectorLaravel\Rector\FuncCall\SleepFuncToSleepStaticCallRector;
 use RectorLaravel\Rector\StaticCall\DispatchToHelperFunctionsRector;
+use RectorLaravel\Rector\FuncCall\UnlinkFuncCallToFileFacadeDeleteRector;
 use Rector\Php80\Rector\Class_\ClassPropertyAssignToConstructorPromotionRector;
 use Rector\TypeDeclaration\Rector\ArrowFunction\AddArrowFunctionReturnTypeRector;
 use RectorLaravel\Rector\ClassMethod\MakeModelAttributesAndScopesProtectedRector;
@@ -45,6 +46,11 @@ return RectorConfig::configure()
         ClassPropertyAssignToConstructorPromotionRector::class,
         CarbonToDateFacadeRector::class,
         MakeModelAttributesAndScopesProtectedRector::class,
+
+        // PathCoverageTracker is a static helper that works without a booted application;
+        // routing its unlink() through the File facade would throw "facade root has not been
+        // set" whenever it is called outside one.
+        UnlinkFuncCallToFileFacadeDeleteRector::class => [__DIR__.'/src/Analysis/PathCoverageTracker.php'],
 
         // tests/ only. Rector has no inline skip -- @noRector was removed in 0.15 as unreliable
         // (rectorphp/rector-src#3148) -- so a deliberate shape in a test is protected here or
